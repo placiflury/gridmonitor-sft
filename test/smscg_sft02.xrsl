@@ -1,0 +1,7 @@
+&(executable=smscg_sft02.sh)
+(memory=100)
+(inputFiles=(smscg_sft_file1 "/opt/smscg/sft/tests/smscg_sft_file1") (smscg_sft02.sh "/opt/smscg/sft/tests/smscg_sft02.sh"))
+(outputFiles=(smscg_sft.log ""))
+(stdout="smscg_sft02.out")
+(stderr="smscg_sft02.err")
+(jobname="SMSCG_SFT_02")

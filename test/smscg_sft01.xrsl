@@ -1,0 +1,4 @@
+&(executable=/bin/hostname)
+(stdout="smscg_sft01.out")
+(stderr="smscg_sft01.err")
+(jobname="SMSCG_SFT_01")
