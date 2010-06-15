@@ -1,0 +1,12 @@
+recursive-include config
+recursive-include sft
+recursive-include test
+sft_daemon.py
+sft_pop.py
+setup.py
+setup.cfg
+__init__.py
+README
+LICENSE
+TODO
+
