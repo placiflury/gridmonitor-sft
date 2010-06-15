@@ -4,6 +4,7 @@ Populate SFT database with tests
 """
 from __future__ import with_statement 
 import logging, logging.config
+from sqlalchemy import engine_from_config
 
 from sft.utils import init_config
 import sft.utils.config_parser as config_parser
@@ -20,10 +21,10 @@ if __name__ == "__main__":
     log = logging.getLogger(__name__)
     init_config('./config/config.ini') 
 
-    db = config_parser.config.get('database') 
     try:
-        init_model(db)
-        log.info("Session object to local database created")
+        sft_engine = engine_from_config(config_parser.config.get(), 'sqlalchemy_sft.')
+        init_model(sft_engine)
+        self.log.info("Session object to local database created")
     except Exception, e:
         log.error("Session object to local database failed: %r", e)
     

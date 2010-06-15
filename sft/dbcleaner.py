@@ -28,8 +28,6 @@ class Cleanex(object):
         self.age = age
         self.log.info("Maximal age of job records set to: %d [sec]" % age)
         self.url_root = url_root
-        Session = orm.scoped_session(meta.Session)
-        self.session = Session()
         self.log.debug("Initialization finished")
    
     
@@ -37,9 +35,10 @@ class Cleanex(object):
         """ Checking for SFT jobs that can be removed. """
         self.log.debug("Checking for expired SFT job records")
  
+        session = meta.Session()
         fetched_before = datetime.utcfromtimestamp(time.time() - self.age)
         
-        fjobs = self.session.query(schema.SFTJob).filter(schema.SFTJob.db_lastmodified<=fetched_before).all()
+        fjobs = session.query(schema.SFTJob).filter(schema.SFTJob.db_lastmodified<=fetched_before).all()
 
         if fjobs:
             self.log.info("Removing %d jobs from db that got fetched." % len(fjobs)) 
@@ -51,9 +50,8 @@ class Cleanex(object):
                         shutil.rmtree(jobdir)
                     except:
                         pass
-                self.session.delete(j)
-            self.session.flush()
-            self.session.commit()
+                session.delete(j)
+            session.commit()
         
 
         

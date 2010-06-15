@@ -11,7 +11,7 @@ import logging, logging.config
 import sys, time 
 from optparse import OptionParser
 from datetime import datetime, timedelta
-from sqlalchemy import orm
+from sqlalchemy import engine_from_config
 
 import sft.utils.config_parser as config_parser
 from sft.daemon import Daemon
@@ -33,13 +33,12 @@ class SFTDaemon(Daemon):
         Daemon.__init__(self, pidfile)
         self.__get_options()
         try:
-            init_model(self.db)
+            sft_engine = engine_from_config(config_parser.config.get(), 'sqlalchemy_sft.')
+            init_model(sft_engine)
             self.log.info("Session object to local database created")
         except Exception, e:
             self.log.error("Session object to local database failed: %r", e)
 
-        Session = orm.scoped_session(meta.Session)
-        self.session = Session()
         self.reset_sft_events() # read SFT events
         self.publisher = Publisher(self.jobsdir, self.url_root)
         self.publisher.set_ngstat_ngget_path(self.ng_commands_path)
@@ -70,11 +69,6 @@ class SFTDaemon(Daemon):
             init_config(options.config_file)
         except Exception, e:
             self.log.error("While reading configuration %s got: %r" % (options.config_file, e))
-            sys.exit(-1)
-        
-        self.db = config_parser.config.get('database')
-        if not self.db:
-            self.log.error("'database' option missing in %s." % (options.config_file))
             sys.exit(-1)
 
         self.jobsdir = config_parser.config.get('jobsdir')
@@ -174,7 +168,8 @@ class SFTDaemon(Daemon):
 
     def reset_sft_events(self):
         self.sft_events = list()
-        for sft in self.session.query(schema.SFTTest).all():
+        session = meta.Session()
+        for sft in session.query(schema.SFTTest).all():
             minute = self._parse_cron(sft.minute, 59)
             hour = self._parse_cron(sft.hour, 23)
             day = self._parse_cron(sft.day, 31)

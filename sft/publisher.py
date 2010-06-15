@@ -44,8 +44,7 @@ class Publisher(object):
         self.ngstat = '/opt/nordugrid/bin/ngstat' # default        
         self.ngget = '/opt/nordugrid/bin/ngget' # default        
         
-        Session = orm.scoped_session(meta.Session)
-        self.session = Session()
+        self.session = meta.Session()
         self.proxy = ProxyUtil()
         self.pos_dn_vos = list() # success to get proxy for (user, VO) list
         self.neg_dn_vos = list() # failed to get proxy for (user,  VO) list

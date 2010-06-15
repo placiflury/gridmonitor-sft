@@ -57,8 +57,7 @@ class SFT_Event(object):
         self.dow = conv_to_set(dow)
         self.sft_name = sft_name
         self.ngsub = '/opt/nordugrid/bin/ngsub'  # default
-        Session = orm.scoped_session(meta.Session)
-        self.session = Session()
+        self.session = meta.Session()
         self.proxy_util = ProxyUtil()
         self.last_error_msg = None
         self.log.debug("Initialization finished")
