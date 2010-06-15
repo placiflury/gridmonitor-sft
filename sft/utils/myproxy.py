@@ -12,10 +12,12 @@ __version__ = "0.1.0"
 import logging
 import os.path, socket
 from OpenSSL import crypto, SSL
-import utils.config_parser as config_parser
+import config_parser
 
-class GetException(Exception): pass
-class RetrieveProxyException(Exception): pass
+class GetException(Exception): 
+    pass
+class RetrieveProxyException(Exception): 
+    pass
 
 
 class MyProxyLogon(object):
@@ -30,7 +32,7 @@ class MyProxyLogon(object):
             self.port = 7512
         else:
             self.port = int(port)
-        lifetime= config_parser.config.get('myproxy_lifetime')
+        lifetime = config_parser.config.get('myproxy_lifetime')
         if not lifetime:
             self.lifetime = 43200
         else:
@@ -92,20 +94,20 @@ class MyProxyLogon(object):
             ind = dat.find('\x30\x82')
             if ind < 0:
                 break
-            len = 256*ord(dat[ind+2]) + ord(dat[ind+3])
+            _len = 256*ord(dat[ind+2]) + ord(dat[ind+3])
             # extract der-format cert, and convert to pem
-            c = dat[ind:ind+len+4]
+            c = dat[ind:ind+_len+4]
             x509 = crypto.load_certificate(crypto.FILETYPE_ASN1, c)
             pem_cert = crypto.dump_certificate(crypto.FILETYPE_PEM, x509)
             pem_certs.append(pem_cert)
 
             # trim cert from data
-            dat = dat[ind + len + 4:]
+            dat = dat[ind + _len + 4:]
         return pem_certs
 
 
 
-    def myproxy_logon(self,username, passphrase, outfile):
+    def myproxy_logon(self, username, passphrase, outfile):
         """
         Function to retrieve a proxy credential from a MyProxy server
         

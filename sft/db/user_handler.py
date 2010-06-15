@@ -25,10 +25,8 @@ class UserPool():
         else:
             self.log.info("Adding user '%s'." % DN)
             user = schema.User(DN,pwd)
-            self.session.save(user)
-            self.session.flush()
+            self.session.add(user)
         self.session.commit() 
-        self.session.clear() # -> make sure things get reloaded freshly
 
 
     def get_user_passwd(self,DN):
@@ -47,16 +45,13 @@ class UserPool():
         user = self.session.query(schema.User).filter_by(DN=DN).first()
         if user:
             user.reset_passwd(passwd)
-            self.session.flush()
             self.session.commit()
-            self.session.clear()
+
 
     def remove_user(self,DN):
         user = self.session.query(schema.User).filter_by(DN=DN).first()
         if user:
             self.log.info("Removing user '%s'." % DN)
             self.session.delete(user)   
-            self.session.flush()
             self.session.commit()
-            self.session.clear() # -> make sure things get reloaded freshly
     

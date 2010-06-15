@@ -7,11 +7,11 @@ __date__ = "08.02.2010"
 __version__ = "0.0.1"
 
 import sqlalchemy as sa
-from sqlalchemy.orm import mapper, relation
+from sqlalchemy.orm import mapper, relationship
 from datetime import datetime
  
-import db.sft_meta as sft_meta
-from utils import config_parser, rsa
+import sft_meta 
+from sft.utils import config_parser, rsa
 
 
 t_cluster = sa.Table("cluster", sft_meta.metadata,
@@ -175,28 +175,28 @@ mapper(Cluster, t_cluster)
 # We do not cascade anything. -> removing group 
 # will update associative table accordingly
 mapper(ClusterGroup, t_cluster_group,
-    properties=dict(clusters=relation(Cluster,
+    properties=dict(clusters=relationship(Cluster,
     secondary=t_cluster_group_as, backref='groups'))
 )
 
 
 mapper(VO, t_vo)
-# N':M' relation between VOGroup and VO 
+# N':M' relationship between VOGroup and VO 
 # We do not cascade anything.
 mapper(VOGroup, t_vo_group,
-    properties=dict(vos=relation(VO,
+    properties=dict(vos=relationship(VO,
     secondary=t_vo_group_as, backref='groups'))
 )
 
 mapper(User,t_user,
-    properties=dict(vos=relation(VO,
+    properties=dict(vos=relationship(VO,
     secondary=t_vo_user_as, backref='users'))
 )
 
 mapper(Test, t_test)
-# N":M" relation between testsuit and tests
+# N":M" relationship between testsuit and tests
 mapper(TestSuit, t_test_suit,
-    properties=dict(tests=relation(Test,
+    properties=dict(tests=relationship(Test,
     secondary=t_test_suit_as, backref='suits'))
 )
 

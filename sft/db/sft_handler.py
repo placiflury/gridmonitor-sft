@@ -32,10 +32,8 @@ class SFTPool():
             sft.cluster_group = cluster_grp
             sft.vo_group = vo_grp
             sft.test_suit = test_suit
-            self.session.save(sft)
-            self.session.flush()
+            self.session.add(sft)
         self.session.commit() 
-        self.session.clear() # -> make sure things get reloaded freshly
 
 
     def set_exectime(self, name, minute='0', hour='*',
@@ -47,9 +45,7 @@ class SFTPool():
             sft.day = day
             sft.month= month
             sft.weekday = weekday
-            self.session.flush()
             self.session.commit()
-            self.session.clear()
         
 
     def remove_sft(self,name):
@@ -57,8 +53,6 @@ class SFTPool():
         if sft:
             self.log.debug("Removing sft '%s'." % name)
             self.session.delete(sft)   
-            self.session.flush()
             self.session.commit()
-            self.session.clear() # -> make sure things get reloaded freshly
     
 

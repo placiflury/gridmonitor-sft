@@ -24,14 +24,11 @@ class ClusterPool():
             self.log.info("Cluster '%s' exists already" % hostname)
             if cluster.alias != alias:
                 cluster.alias = alias
-                self.session.flush()
         else:
             self.log.info("Adding cluster '%s'." % hostname)
             cluster = schema.Cluster(hostname,alias)
             self.session.add(cluster)
-            self.session.flush()
         self.session.commit() 
-        #self.session.clear() # -> make sure things get reloaded freshly
 
 
     def remove_cluster(self,hostname):
@@ -39,9 +36,7 @@ class ClusterPool():
         if cluster:
             self.log.info("Removing cluster '%s'." % hostname)
             self.session.delete(cluster)   
-            self.session.flush()
             self.session.commit()
-            #self.session.clear() # -> make sure things get reloaded freshly
     
 
 class ClusterGroupPool():
@@ -62,9 +57,7 @@ class ClusterGroupPool():
         else:
             self.log.info("Adding group '%s'." % groupname)
             self.session.add(schema.ClusterGroup(groupname))
-            self.session.flush()
             self.session.commit()
-            #self.session.clear() # -> make sure things get reloaded freshly
 
 
     def remove_group(self, groupname):
@@ -72,9 +65,7 @@ class ClusterGroupPool():
         if group:
             self.log.info("Removing group '%s'." % groupname)
             self.session.delete(group)
-            self.session.flush()
             self.session.commit()
-            #self.session.clear() # -> make sure things get reloaded freshly
 
              
 
@@ -96,7 +87,5 @@ class ClusterGroupPool():
             self.log.info("Cluster '%s' added to group '%s'." % (clustername, groupname))
             group.clusters.append(cluster) 
         
-        self.session.flush()
         self.session.commit()
-        #self.session.clear() # -> make sure things get reloaded freshly
         

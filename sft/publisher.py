@@ -14,8 +14,8 @@ from datetime import datetime
 
 from utils.myproxy_vomsproxy import  ProxyUtil
 from indexer import HTMLIndexer, HTMLIndexerError
-import db.sft_meta as meta
-import db.sft_schema as schema
+import sft.db.sft_meta as meta
+import sft.db.sft_schema as schema
 
 __author__ = "Placi Flury placi.flury@switch.ch"
 __date__ = "20.04.2010"
@@ -41,6 +41,8 @@ class Publisher(object):
         except HTMLIndexerError, e: 
             self.log.error("%s:  %s" % ( e.expression, e.message))
             
+        self.ngstat = '/opt/nordugrid/bin/ngstat' # default        
+        self.ngget = '/opt/nordugrid/bin/ngget' # default        
         
         Session = orm.scoped_session(meta.Session)
         self.session = Session()
@@ -50,6 +52,13 @@ class Publisher(object):
         self.last_error_msg = None
         self.log.debug("Initialization finished")
 
+    def set_ngstat_ngget_path(self, path):
+        """ overwrite default path for ngsub command """
+        if path:
+            self.ngstat = os.path.join(path, 'ngstat') 
+            self.log.info("'ngstat' command path set to '%s'" % self.ngstat)
+            self.ngget = os.path.join(path, 'ngget') 
+            self.log.info("'ngget' command path set to '%s'" % self.ngget)
 
     def reset_proxy_cache(self):
         """ resets (user,VO) caches. """
@@ -96,7 +105,7 @@ class Publisher(object):
                 self.pos_dn_vos.append((DN, vo_name))
 
             os.putenv('X509_USER_PROXY', vomsproxy_file)
-            cmd = "/opt/nordugrid/bin/ngstat %s" % (jobid)
+            cmd = "%s %s" % (self.ngstat, jobid)
             ret = subprocess.Popen(cmd, shell=True, 
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             ret.wait()
@@ -169,7 +178,7 @@ class Publisher(object):
                 entry.db_lastmodified = datetime.utcnow()
                 self.session.flush()
                 
-            else: # XXX shall we try again??
+            else: 
                 self.log.error("Fetching %s failed with %s" % (jobid, self.get_last_error_msg()))
         
         self.session.commit()
@@ -183,7 +192,7 @@ class Publisher(object):
             can be fetched. 
         """    
         
-        cmd = "/opt/nordugrid/bin/ngget -dir %s  %s" % (self.jobsdir, jobid.strip())
+        cmd = "%s -dir %s  %s" % (self.ngget, self.jobsdir, jobid.strip())
         ret = subprocess.Popen(cmd, shell=True, 
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         ret.wait()
@@ -206,21 +215,3 @@ class Publisher(object):
         self.reset_proxy_cache()
 
  
-if __name__ == "__main__":
-    import logging.config
-    from init import init_config, init_model
-    import utils.config_parser as config_parser
-    
-    logging.config.fileConfig("./config/logging.conf")
-    init_config('./config/config.ini') 
-
-    db = config_parser.config.get('database') 
-    jdir = config_parser.config.get('jobsdir')
-    uroot = os.path.join(config_parser.config.get('url_root'), 'public')
-    try:
-        init_model(db)
-    except Exception, ex:
-        print "Session object to local database failed: %r" %  ex
-    
-    jdog = Publisher(jdir, uroot)
-    jdog.main()

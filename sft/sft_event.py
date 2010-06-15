@@ -4,8 +4,8 @@ http://stackoverflow.com/questions/373335/suggestions-for-a-cron-like-scheduler-
 
 """
 __author__ = "Placi Flury placi.flury@switch.ch"
-__date__ = "19.02.2010"
-__version__ = "0.1.0"
+__date__ = "11.06.2010"
+__version__ = "0.2.0"
 
 import logging
 import db.sft_meta as meta
@@ -66,8 +66,8 @@ class SFT_Event(object):
     def set_ngsub_path(self, path):
         """ overwrite default path for ngsub command """
         if path:
-            self.ngsub = path
-            self.log.info("'ngsub' command path set to '%s'" % path)
+            self.ngsub = os.path.join(path, 'ngsub') 
+            self.log.info("'ngsub' command path set to '%s'" % self.ngsub)
 
     def matchtime(self, t):
         """Return True if this event should trigger at the specified datetime"""
@@ -166,7 +166,7 @@ class SFT_Event(object):
                                     self.log.error("Job submission failed (retcode is 0)")
                                     sft_job.status = 'failed'
                                     sft_job.error_msg = output[0]
-                                    self.session.save(sft_job)
+                                    self.session.add(sft_job)
                                     self.session.flush()
                                     break
                                 else: 
@@ -180,7 +180,7 @@ class SFT_Event(object):
                                 sft_job.error_type = "ngsub"
                                 sft_job.error_msg = self.get_last_error()
                                 sft_job.status = 'failed'
-                            self.session.save(sft_job)
+                            self.session.add(sft_job)
                             self.session.flush()
                     break # if one user succeeded we stop
                 # end user-loop 
@@ -195,7 +195,7 @@ class SFT_Event(object):
                     sft_job.status = 'failed'
                     sft_job.vo_name = vo.name
                 if myproxy_error or vomsproxy_error:
-                    self.session.save(sft_job)
+                    self.session.add(sft_job)
                     self.session.flush()
                 
             # end vo loop

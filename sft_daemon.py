@@ -2,7 +2,6 @@
 """
 reads sft dababase and checks whether something needs to be executed.
 
-XXX: monitor it with Nagios
 """
 __author__ = "Placi Flury placi.flury@switch.ch"
 __date__ = "19.02.2010"
@@ -43,6 +42,7 @@ class SFTDaemon(Daemon):
         self.session = Session()
         self.reset_sft_events() # read SFT events
         self.publisher = Publisher(self.jobsdir, self.url_root)
+        self.publisher.set_ngstat_ngget_path(self.ng_commands_path)
         self.cleaner = Cleanex(self.max_jobs_age, self.url_root)
         self.log.debug("Initialization finished")
 
@@ -51,7 +51,7 @@ class SFTDaemon(Daemon):
         parser = OptionParser(usage=usage, version ="%prog " + __version__)
         parser.add_option("" , "--config_file", action="store",
             dest="config_file", type="string",
-            default="config/config.ini",
+            default="/opt/smscg/sft/etc/config.ini",
             help="File holding the sft specific configuration for this site (default=%default)")
 
         (options, args) = parser.parse_args()
@@ -94,7 +94,7 @@ class SFTDaemon(Daemon):
             max_jobs_age = 86400  # 1 day
         self.max_jobs_age = int(max_jobs_age)
 
-        self.ngsub_path = config_parser.config.get('ngsub_path')
+        self.ng_commands_path = config_parser.config.get('ng_commands_path')
 
     def change_state(self):
         if self.command == 'start':
@@ -185,7 +185,7 @@ class SFTDaemon(Daemon):
                     minute = minute, hour = hour,
                     day = day, month = month,
                     dow = dow)
-            event.set_ngsub_path(self.ngsub_path)
+            event.set_ngsub_path(self.ng_commands_path)
             self.sft_events.append(event)
 
 

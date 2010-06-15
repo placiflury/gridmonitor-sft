@@ -29,6 +29,9 @@ if __name__ == "__main__":
     
     
     cl = ClusterPool()
+    cl_grp = ClusterGroupPool()
+    cl_grp.remove_group('smscg_clusters')
+    """
     cl.add_cluster('nordugrid.unibe.ch','Bern UBELIX T3 Cluster')
     cl.add_cluster('ce.lhep.unibe.ch', 'Bern ATLAS T3')
     cl.add_cluster('smscg.epfl.ch', 'SMSCG_EPFL')
@@ -42,7 +45,7 @@ if __name__ == "__main__":
     cl.add_cluster('hera.wsl.ch', 'WSL Grid Cluster')
     cl.add_cluster('bacchus.switch.ch', 'SMSCG - TEST - SWITCH')
     cl.add_cluster('arc02.lcg.cscs.ch', 'Manno PHOENIX T2')
-
+    
     cl_grp = ClusterGroupPool()
     cl_grp.create_group("smscg_clusters")
     cl_grp.add_cluster('smscg_clusters','disir.switch.ch') 
@@ -154,4 +157,4 @@ if __name__ == "__main__":
     sft.set_exectime('arc_std_sft', minute='1', hour='2', day='1', month= '*/1')
     sft.add_sft('smscg_std_sft','smscg_clusters', 'noRTEpool','smscg_std_suit')
     sft.set_exectime('smscg_std_sft', minute='23', hour='9', day='*/1', month= '*/1')
- 
+    """ 

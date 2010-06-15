@@ -22,23 +22,18 @@ class TestPool():
             self.log.info("Test '%s' exists already" % name)
             if test.xrsl != xrsl:
                 test.xsl = xrsl
-                self.session.flush()
         else:
             self.log.debug("Adding test '%s'." % name)
             test = schema.Test(name,xrsl)
             self.session.add(test)
-            self.session.flush()
         self.session.commit() 
-        #self.session.clear() # -> make sure things get reloaded freshly
 
     def remove_vo(self, name):
         test = self.session.query(schema.Test).filter_by(name=name).first()
         if vo:
             self.log.debug("Removing test '%s'." % name)
             self.session.delete(test)   
-            self.session.flush()
             self.session.commit()
-            #self.session.clear() # -> make sure things get reloaded freshly
     
 
 class TestSuitPool():
@@ -56,9 +51,7 @@ class TestSuitPool():
             self.log.info("Test suit '%s' exists already" % suitname)
         else:
             self.session.add(schema.TestSuit(suitname))
-            self.session.flush()
             self.session.commit()
-            #self.session.clear() # -> make sure things get reloaded freshly
 
 
     def remove_suit(self, suitname):
@@ -66,9 +59,7 @@ class TestSuitPool():
         if suit:
             self.log.debug("Removing suit '%s'." % suitname)
             self.session.delete(suit)
-            self.session.flush()
             self.session.commit()
-            #self.session.clear() # -> make sure things get reloaded freshly
              
 
     def add_test(self,suitname,testname):
@@ -88,7 +79,5 @@ class TestSuitPool():
         if not test in suit.tests:
             suit.tests.append(test) 
         
-        self.session.flush()
         self.session.commit()
-        #self.session.clear() # -> make sure things get reloaded freshly
         
