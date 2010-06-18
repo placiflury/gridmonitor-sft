@@ -11,8 +11,7 @@ class ClusterPool():
     
     def __init__(self):
         self.log = logging.getLogger(__name__)
-        Session=orm.scoped_session(sft_meta.Session)
-        self.session = Session()
+        self.session = sft_meta.Session()
         self.log.debug("Initialization finished")
     
     def __del__(self):
@@ -43,8 +42,7 @@ class ClusterGroupPool():
         
     def __init__(self):
         self.log = logging.getLogger(__name__)
-        Session=orm.scoped_session(sft_meta.Session)
-        self.session = Session()
+        self.session = sft_meta.Session()
         self.log.debug("Initialization finished")
 
     def __del__(self):
