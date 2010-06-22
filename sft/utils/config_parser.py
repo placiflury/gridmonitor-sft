@@ -16,9 +16,9 @@ import os.path
 
 config = None
 
-class GIIS2DBError(Exception):
+class SFT2DBError(Exception):
     """ 
-    Exception raised for GIIS2DB errors.
+    Exception raised for SFT2DB errors.
     Attributes:
         expression -- input expression in which error occurred
         message -- explanation of error 
@@ -27,7 +27,7 @@ class GIIS2DBError(Exception):
         self.expression = expression
         self.message = message
 
-class GIIS2DBConfigError(GIIS2DBError):
+class SFT2DBConfigError(SFT2DBError):
     """Exception raised on configuration error(s)."""
     pass
 
@@ -42,7 +42,7 @@ class ConfigReader:
         if os.path.exists(config_file) and os.path.isfile(config_file):
             self.parser.read(config_file)
         else:
-            raise GIIS2DBConfigError("Config file missing", "File '%s' doesn't exist." % (config_file))            
+            raise SFT2DBConfigError("Config file missing", "File '%s' doesn't exist." % (config_file))            
 
 
     def __get_list(self,list_str):
@@ -70,10 +70,10 @@ class ConfigReader:
         if os.path.exists(gm_cfg) and os.path.isfile(gm_cfg):
             parser2.read(gm_cfg)
         else:
-            raise GIIS2DBConfigError("GridMonitor Config file missing", "File '%s' doesn't exist." % (gm_cfg))         
+            raise SFT2DBConfigError("GridMonitor Config file missing", "File '%s' doesn't exist." % (gm_cfg))         
 
         if not parser2.has_section('app:main'):
-            raise GIIS2DBConfigError("Secion app:main missing", "File '%s' has no app:main section." % (gm_cfg))         
+            raise SFT2DBConfigError("Secion app:main missing", "File '%s' has no app:main section." % (gm_cfg))         
         
         voms_raw = parser2.get('app:main','voms')
         voms_servers = dict()
@@ -124,6 +124,6 @@ if __name__ == "__main__":
         #print c.get_default_mappings()
         #print c.get_pool_accounts()
         g= c.get()
-    except GIIS2DBError, e:
+    except SFT2DBError, e:
         print "Error: ", e.message
 
