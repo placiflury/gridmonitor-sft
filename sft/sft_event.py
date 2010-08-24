@@ -38,15 +38,15 @@ class SFT_Event(object):
     def __init__(self, sft_name, minute=None, hour=None,
                        day=None, month=None, dow=None):
 
-        if not minute:
+        if not minute and minute !=0 :
             minute = allMatch
-        if not hour:
+        if not hour and hour != 0:
             hour = allMatch
-        if not day:
+        if not day and day !=0:
             day = allMatch
-        if not month:
+        if not month and month != 0:
             month = allMatch
-        if not dow:
+        if not dow and dow !=0:
             dow = allMatch
 
         self.log = logging.getLogger(__name__)
