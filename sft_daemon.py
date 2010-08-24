@@ -185,7 +185,7 @@ class SFTDaemon(Daemon):
 
 
     def run(self):
-        t = datetime(*datetime.now().timetuple()[:5])
+        t = datetime(*datetime.utcnow().timetuple()[:5])
         
         check_counter = SFTDaemon.CHECK_JOBS_EVERY_MINUTES  
 
@@ -195,11 +195,11 @@ class SFTDaemon(Daemon):
                 e.check_exec(t)
 
             t += timedelta(minutes=1)
-            n = datetime.now()
+            n = datetime.utcnow()
             while n < t:
                 s = (t - n).seconds # makes sure we do not get t < datetime.now() before going to sleep.
                 time.sleep(s)
-                n = datetime.now()
+                n = datetime.utcnow()
             
             if check_counter <= 0:
                 self.publisher.main()
