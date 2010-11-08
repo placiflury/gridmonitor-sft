@@ -10,7 +10,6 @@ __version__ = "0.2.0"
 import logging
 import db.sft_meta as meta
 import db.sft_schema as schema
-from sqlalchemy import orm
 import os, os.path, hashlib
 from utils.myproxy_vomsproxy import  ProxyUtil
 import subprocess
@@ -38,15 +37,15 @@ class SFT_Event(object):
     def __init__(self, sft_name, minute=None, hour=None,
                        day=None, month=None, dow=None):
 
-        if not minute and minute !=0 :
+        if not minute and minute != 0 :
             minute = allMatch
         if not hour and hour != 0:
             hour = allMatch
-        if not day and day !=0:
+        if not day and day != 0:
             day = allMatch
         if not month and month != 0:
             month = allMatch
-        if not dow and dow !=0:
+        if not dow and dow != 0:
             dow = allMatch
 
         self.log = logging.getLogger(__name__)
@@ -118,84 +117,101 @@ class SFT_Event(object):
         """ returns very last error that occurred """
         return self.last_error_msg
 
+    def _set_vo_user(self, vo):
+        """ For one of the users that is member of this VO
+            we try to create a voms proxy certificate (may be
+            preceeded by fetching the user's myproxy cert). 
+            If a voms-proxy could be created, the X509_USER_CERT
+            variable will point to the proxy.
+            
+            Params: VO -- the VO ORM object.
+            Returns: None, None    -- if VO has no assigned users
+                    False, {error_type, error_msg} == if things went wrong
+                    True, DN        -- if things went fine
+        """
+        error_type = None
+        error_msg = None
+ 
+        for user in vo.users:
+            DN = user.DN
+            passwd = user.get_passwd()
+            file_prefix = hashlib.md5(DN).hexdigest()
+            myproxy_file = os.path.join(self.proxy_util.get_proxy_dir(),
+                             file_prefix)
+            vomsproxy_file = os.path.join(self.proxy_util.get_proxy_dir(), 
+                            file_prefix + '_' + vo.name) # proxy file
+            
+            if not self.proxy_util.check_create_myproxy(DN, passwd, myproxy_file):
+                error_type = 'myproxy'
+                error_msg = self.proxy_util.get_last_error()
+                status = False
+                continue
+
+            if not self.proxy_util.check_create_vomsproxy(DN, file_prefix, vo.name):
+                error_type = 'vomsproxy'
+                error_msg = self.proxy_util.get_last_error()
+                status = False
+                continue
+                        
+            os.putenv('X509_USER_PROXY', vomsproxy_file)
+            return True, DN
+
+        return False, dict(error_type=error_type, error_msg=error_msg)
+
+
     def check_exec(self, t):
         """ checks whether it's time to execute sft event. """
         if self.matchtime(t):
             vos, clusters, tests = self.get_sft_details()
-            # fetch representative user(s) for each VO.
             for vo in vos:
-                myproxy_error = False
-                vomsproxy_error = False
-                for user in vo.users:
-                    DN = user.DN
-                    passwd = user.get_passwd()
-                   
-                    file_prefix = hashlib.md5(DN).hexdigest()
-                    myproxy_file = os.path.join(self.proxy_util.get_proxy_dir(),
-                                     file_prefix)
-                    vomsproxy_file = os.path.join(self.proxy_util.get_proxy_dir(), 
-                                    file_prefix + '_' + vo.name) # proxy file
-                    
-                    if not self.proxy_util.check_create_myproxy(DN, passwd, myproxy_file):
-                        myproxy_error = True
-                        continue    
-                    if not self.proxy_util.check_create_vomsproxy(DN, file_prefix, vo.name):
-                        vomsproxy_error = True
-                        continue
+                if not vo.users:  # not an error
+                    continue
+                
+                status, res = self._set_vo_user(vo)
 
-                    # submit jobs to cluster            
-                    os.putenv('X509_USER_PROXY', vomsproxy_file)
-                    for cluster in clusters:
-                        for test in tests:
-                            sft_job = schema.SFTJob(self.sft_name)
-                            sft_job.cluster_name = cluster.hostname
-                            sft_job.DN = DN
-                            sft_job.vo_name = vo.name
-                            sft_job.test_name = test.name
-                            cmd = "%s -c %s -e '%s'" % \
-                                (self.ngsub, cluster.hostname, test.xrsl.replace('\n',' '))
-                            ret = subprocess.Popen(cmd, shell=True, 
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                            ret.wait()
-                            ret.poll()
-                            if ret.returncode == 0:
-                                # additional check -> if cluster does not exists, we still get returncode =0
-                                output = ret.communicate()
-                                if 'Job submission failed due to' in output[0]:    
-                                    self.log.error("Job submission failed (retcode is 0)")
-                                    sft_job.status = 'failed'
-                                    sft_job.error_msg = output[0]
-                                    self.session.add(sft_job)
-                                    self.session.flush()
-                                    break
-                                else: 
-                                    jobid = output[0].split('jobid:')[1].strip()
-                                    sft_job.jobid = jobid
-                                    self.log.debug("Job sumbitted: ID %s" % (jobid))
-                                    sft_job.status = 'submitted'
-                            else:
-                                self.last_error_msg = ret.communicate()[0]
-                                self.log.error("Job submission failed.")
-                                sft_job.error_type = "ngsub"
-                                sft_job.error_msg = self.get_last_error()
-                                sft_job.status = 'failed'
-                            self.session.add(sft_job)
-                            self.session.flush()
-                    break # if one user succeeded we stop
-                # end user-loop 
-                if myproxy_error:
-                    sft_job = schema.SFTJob(self.sft_name, 
-                        error_type = "myproxy", error_msg=self.proxy_util.get_last_error())
+                if status == False:
+                    sft_job = schema.SFTJob(self.sft_name, **res)
                     sft_job.status = 'failed'
                     sft_job.vo_name = vo.name
-                if vomsproxy_error:    
-                    sft_job = schema.SFTJob(self.sft_name, 
-                        error_type = "vomsproxy", error_msg=self.proxy_util.get_last_error())
-                    sft_job.status = 'failed'
-                    sft_job.vo_name = vo.name
-                if myproxy_error or vomsproxy_error:
                     self.session.add(sft_job)
                     self.session.flush()
-                
-            # end vo loop
+                    continue 
+                # we got the vomsproxy so let's submit jobs to the clusters
+                DN = res 
+                for cluster in clusters:
+                    for test in tests:
+                        sft_job = schema.SFTJob(self.sft_name)
+                        sft_job.cluster_name = cluster.hostname
+                        sft_job.DN = DN
+                        sft_job.vo_name = vo.name
+                        sft_job.test_name = test.name
+                        cmd = "%s -c %s -e '%s'" % \
+                            (self.ngsub, cluster.hostname, test.xrsl.replace('\n',' '))
+                        ret = subprocess.Popen(cmd, shell=True, 
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                        ret.wait()
+                        ret.poll()
+                        if ret.returncode == 0:
+                            # additional check -> if cluster does not exists, we still get returncode =0
+                            output = ret.communicate()
+                            if 'Job submission failed due to' in output[0]:    
+                                self.log.error("Job submission failed (retcode is 0)")
+                                sft_job.status = 'failed'
+                                sft_job.error_msg = output[0]
+                                self.session.add(sft_job)
+                                self.session.flush()
+                                break
+                            else: 
+                                jobid = output[0].split('jobid:')[1].strip()
+                                sft_job.jobid = jobid
+                                self.log.debug("Job sumbitted: ID %s" % (jobid))
+                                sft_job.status = 'submitted'
+                        else:
+                            self.last_error_msg = ret.communicate()[0]
+                            self.log.error("Job submission failed.")
+                            sft_job.error_type = "ngsub"
+                            sft_job.error_msg = self.get_last_error()
+                            sft_job.status = 'failed'
+                        self.session.add(sft_job)
+                        self.session.flush()
             self.session.commit()

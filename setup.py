@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 
 from distutils.core import setup
-#from setuptools  import setup
-
 
 setup(
     name = "smscg_sft",
     version = "0.3.0",
-    description = "Site Functional Tests (SFT) module for the SMSCG gridmonitor.",
+    description = "Site Functional Tests (SFT) module for the SMSCG GridMonitor.",
     long_description = """
 	This module provides a daemon that runs Site Functional Tests. The SFTs are
     stored in a database (both the test specification and the test output). 
@@ -20,10 +18,9 @@ setup(
     author = "Placi Flury",
     author_email = "grid@switch.ch",
     url = "http://www.smscg.ch",
-    download_url = "http://repo.smscg.ch",
+    download_url = "https://subversion.switch.ch/svn/smscg/smscg/",
     packages = ['sft','sft/db', 'sft/utils'],
     scripts = ['sft_daemon.py'],
-    data_files=[('.',['config/config.ini','config/logging.conf',
-                'test/job1.xrsl'])]
+    data_files=[('.',['config/config.ini','config/logging.conf'])]
 )
 
