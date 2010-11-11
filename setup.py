@@ -11,7 +11,8 @@ setup(
     stored in a database (both the test specification and the test output). 
     The SMSCG gridmonitor is accessing the database for displaying the SFTs.
     Via the SMSCG gridmonitor, the password of SFT users can be changed.
-    (Currently the gridmonitor does not support further SFT editing.)
+    (Currently the gridmonitor does not support further SFT administration via the
+    web-interface (top-priority on the todo-list.)
     """,
     platforms = "Linux",
     license = "BSD. Copyright (c) 2008, SMSCG - Swiss Multi Science Computing Grid. All rights reserved." ,
@@ -21,6 +22,7 @@ setup(
     download_url = "https://subversion.switch.ch/svn/smscg/smscg/",
     packages = ['sft','sft/db', 'sft/utils'],
     scripts = ['sft_daemon.py'],
-    data_files=[('.',['config/config.ini','config/logging.conf'])]
+    data_files=[('.',['config/config.ini','config/logging.conf','sft_pop.py']), 
+                ('test',['test/job1.xrsl','test/job2.xrsl','test/smscg_sft01.xrsl','test/smscg_sft02.xrsl'])]
 )
 

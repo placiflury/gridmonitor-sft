@@ -17,9 +17,9 @@ from sft.db.user_handler import UserPool
 
 if __name__ == "__main__":
     
-    logging.config.fileConfig("./config/logging.conf")
+    logging.config.fileConfig("./logging.conf")
     log = logging.getLogger(__name__)
-    init_config('./config/config.ini') 
+    init_config('./config.ini') 
 
     try:
         sft_engine = engine_from_config(config_parser.config.get(), 'sqlalchemy_sft.')
@@ -30,19 +30,6 @@ if __name__ == "__main__":
     
     
     cl = ClusterPool()
-    """
-    cl.add_cluster('nordugrid.unibe.ch','Bern UBELIX T3 Cluster')
-    cl.add_cluster('ce.lhep.unibe.ch', 'Bern ATLAS T3')
-    cl.add_cluster('smscg.epfl.ch', 'SMSCG_EPFL')
-    cl.add_cluster('disir.switch.ch', 'SMSCG - SWITCH')
-    cl.add_cluster('arctest.hesge.ch', 'arcXWCH at HEPIA, Geneva')
-    cl.add_cluster('globus.vital-it.ch', 'SMSCG - Vital-IT')
-    #cl.remove_cluster('ociknor.unizh.ch')
-    cl.remove_cluster('smscg.unibe.ch')
-    cl.add_cluster('ocikbnor.uzh.ch', 'OCI Grid Cluster')
-    cl.add_cluster('idgc3grid01.uzh.ch', 'OCI Grid Cluster')
-    cl.add_cluster('hera.wsl.ch', 'WSL Grid Cluster')
-    """
     cl.add_cluster('bacchus.switch.ch', 'SMSCG - TEST - SWITCH')
     cl.add_cluster('alemonia.switch.ch', 'SMSCG - T2')
 
@@ -50,78 +37,27 @@ if __name__ == "__main__":
     cl_grp.create_group("smscg_clusters")
     cl_grp.add_cluster('smscg_clusters','alemnia.switch.ch') 
     cl_grp.add_cluster('smscg_clusters','bacchus.switch.ch') 
-    """
-    cl_grp.add_cluster('smscg_clusters','nordugrid.unibe.ch') 
-    cl_grp.add_cluster('smscg_clusters','ce.lhep.unibe.ch') 
-    cl_grp.add_cluster('smscg_clusters','smscg.epfl.ch') 
-    cl_grp.add_cluster('smscg_clusters','arctest.hesge.ch') 
-    cl_grp.add_cluster('smscg_clusters','globus.vital-it.ch') 
-    cl_grp.add_cluster('smscg_clusters','hera.wsl.ch') 
-    cl_grp.add_cluster('smscg_clusters','ocikbnor.uzh.ch') 
-    cl_grp.add_cluster('smscg_clusters','idgc3grid01.uzh.ch') 
-
-    cl_grp.create_group("atlas_clusters")
-    cl_grp.add_cluster('atlas_clusters','nordugrid.unibe.ch') 
-    cl_grp.add_cluster('atlas_clusters','ce.lhep.unibe.ch') 
-
-    cl_grp.create_group("life_clusters")
-    cl_grp.add_cluster('life_clusters','globus.vital-it.ch') 
-    cl_grp.add_cluster('life_clusters','hera.wsl.ch') 
-    cl_grp.add_cluster('life_clusters','ocikbnor.uzh.ch') 
-    cl_grp.add_cluster('life_clusters','idgc3grid01.uzh.ch') 
-    """
 
     vo = VOPool()
-    vo.add_vo('crypto','voms.smscg.ch')
-    vo.add_vo('life','voms.smscg.ch')
     vo.add_vo('smscg','voms.smscg.ch')
-    vo.add_vo('tutor','voms.smscg.ch')
-    vo.add_vo('earth','voms.smscg.ch')
-#    vo.add_vo('atlas','voms.cern.ch')
+    vo.add_vo('atlas','voms.cern.ch')
    
      
     vo_grp = VOGroupPool()
     vo_grp.create_group('noRTEpool')
     vo_grp.add_vo('noRTEpool','smscg')
-    vo_grp.add_vo('noRTEpool','crypto')
-    vo_grp.add_vo('noRTEpool','tutor')
+    vo_grp.add_vo('noRTEpool','atlas')
     
-    vo_grp.create_group('lifepool')
-    vo_grp.add_vo('lifepool','life')
-    
-    vo_grp.create_group('earthpool')
-    vo_grp.add_vo('earthpool','earth')
-
 
     up = UserPool()
     pf = '/DC=ch/DC=switch/DC=slcs/O=Switch - Teleinformatikdienste fuer Lehre und Forschung/CN=Placi Flury C82EEB1A'
-    pf_pwd = 'lap5ns'
+    pf_pwd = 'secret1'
     up.remove_user(pf)
     up.add_user(pf,pf_pwd)
-    pf2 = '/DC=com/DC=quovadisglobal/DC=grid/DC=switch/DC=users/C=CH/O=SWITCH/CN=Placi Flury'
-    pf2_pwd = 'lap5ns'
-    up.remove_user(pf2)
-    up.add_user(pf2,pf2_pwd)
-    """
-    sergio ='/DC=ch/DC=switch/DC=slcs/O=Universitaet Zuerich/CN=Sergio Maffioletti FD0DDA88'
-    sergio_pwd = 'fak3'
-    up.add_user(sergio,sergio_pwd)
-
-    ale='/DC=ch/DC=switch/DC=slcs/O=Switch - Teleinformatikdienste fuer Lehre und Forschung/CN=Alessandro Usai 5B9F01EF'
-    ale_pwd = 'r0ckst4r'
-    up.add_user(ale,ale_pwd)
-    """
+    
     vo_upool = VOUserPool()
     vo_upool.add_user('smscg',pf)
-    vo_upool.add_user('crypto',pf2)
-    """
-    vo_upool.add_user('smscg',sergio)
-    vo_upool.add_user('smscg',ale)
-
-    vo_upool.add_user('crypto',pf)
-    vo_upool.add_user('crypto',sergio)
-    vo_upool.add_user('life',sergio)
-    """
+    vo_upool.add_user('atlas',pf)
 
     tst = TestPool()
     xrsl = ""
