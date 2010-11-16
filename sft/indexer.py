@@ -46,8 +46,8 @@ class HTMLIndexer(object):
         url_root = url_root.strip()
 
         if not os.path.exists(url_root):
-            raise HTMLIndexerError("URL root does not exist", 
-                    "url_root ('%s')  does not exist." % url_root)
+            self.log.info("url_root ('%s')  does not exist, creating it." % url_root)
+            os.mkdir(url_root)
         if not os.path.isabs(url_root):
             raise HTMLIndexerError("URL path error",
                     "url_root ('%s')  must be an absolute path." % url_root)
@@ -83,8 +83,8 @@ class HTMLIndexer(object):
             self.log.debug("Filesystem path set to '%s'" % path)
 
         if not os.path.exists(path):
-            self.log.error("Path %s does not exists." % path)
-            raise HTMLIndexerError("Path error", "Path %s does not exists." % path)
+            self.log.info("Path %s does not exists, creating it" % path)
+            os.mkdir(path)
 
         self.path = path
         self.log.debug("URL root is '%s', and directory to be indexed is '%s'" %  \
