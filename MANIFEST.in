@@ -1,0 +1,10 @@
+recursive-include config *
+recursive-include test *
+include sft_daemon.py
+include sft_pop.py
+include setup.py
+include setup.cfg
+include README
+include LICENSE
+include TODO
+
