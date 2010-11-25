@@ -144,13 +144,11 @@ class SFT_Event(object):
             if not self.proxy_util.check_create_myproxy(DN, passwd, myproxy_file):
                 error_type = 'myproxy'
                 error_msg = self.proxy_util.get_last_error()
-                status = False
                 continue
 
             if not self.proxy_util.check_create_vomsproxy(DN, file_prefix, vo.name):
                 error_type = 'vomsproxy'
                 error_msg = self.proxy_util.get_last_error()
-                status = False
                 continue
                         
             os.putenv('X509_USER_PROXY', vomsproxy_file)

@@ -5,7 +5,6 @@ Dealing with cluster and cluster groups
 import logging
 import sft_meta
 import sft_schema as schema
-from sqlalchemy import orm
 
 class UserPool():
     

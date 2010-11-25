@@ -5,7 +5,6 @@ Dealing with test and test suits
 import logging
 import sft_meta
 import sft_schema as schema
-from sqlalchemy import orm
 
 class TestPool():
     

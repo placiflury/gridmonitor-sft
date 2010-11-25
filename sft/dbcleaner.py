@@ -2,7 +2,6 @@
 Cleans up old sft job records in db
 """
 import logging, time, shutil
-from sqlalchemy import orm
 from datetime import datetime
 
 import db.sft_meta as meta

@@ -6,7 +6,6 @@ that got submitted.
 import logging
 import os, os.path,  hashlib
 import subprocess
-from sqlalchemy import orm
 from sqlalchemy import and_ as AND
 from sqlalchemy import or_ as OR
 from datetime import datetime
