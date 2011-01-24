@@ -24,7 +24,7 @@ if __name__ == "__main__":
     try:
         sft_engine = engine_from_config(config_parser.config.get(), 'sqlalchemy_sft.')
         init_model(sft_engine)
-        self.log.info("Session object to local database created")
+        log.info("Session object to local database created")
     except Exception, e:
         log.error("Session object to local database failed: %r", e)
     
