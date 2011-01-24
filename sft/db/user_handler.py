@@ -21,18 +21,22 @@ class UserPool():
         self.session.close()
 
     @strip_args
-    def add_user(self, DN, pwd):
+    def add_user(self, DN, display_name,pwd):
         """ Adding a user to the user pool. 
             params: DN - X509 DN of user
+                    display_name - display name for user
                     pwd - password of user, will be stored encrypted 
                         with hostkey of machine where SFTs run.
         """
         user = self.session.query(schema.User).filter_by(DN=DN).first()
         if user:
             self.log.info("User '%s' exists already" % DN)
+            if user.display_name != display_name:
+                user.display_name = display_name
+                self.session.add(user)
         else:
             self.log.info("Adding user '%s'." % DN)
-            user = schema.User(DN,pwd)
+            user = schema.User(DN, display_name, pwd)
             self.session.add(user)
         self.session.commit() 
 

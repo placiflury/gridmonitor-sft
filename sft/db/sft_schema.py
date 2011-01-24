@@ -38,6 +38,7 @@ t_vo_group_as = sa.Table("vo_group_as", sft_meta.metadata,
 
 t_user = sa.Table("user", sft_meta.metadata,
         sa.Column("DN", sa.types.VARCHAR(255),primary_key=True),
+        sa.Column("display_name", sa.types.VARCHAR(50)),
         sa.Column("passwd",sa.types.Text(),nullable=False))
 
 t_vo_user_as = sa.Table('vo_user_as', sft_meta.metadata,
@@ -105,8 +106,9 @@ class User(object):
     """
     User password is stored encrypted on db.
     """
-    def __init__(self,DN,pwd):
+    def __init__(self,DN,display_name, pwd):
         self.DN = DN
+        self.display_name = display_name
         self.passwd = None
         self.reset_passwd(pwd)
 

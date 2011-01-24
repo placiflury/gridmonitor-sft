@@ -53,7 +53,7 @@ if __name__ == "__main__":
     pf = '/DC=ch/DC=switch/DC=slcs/O=Switch - Teleinformatikdienste fuer Lehre und Forschung/CN=Placi Flury C82EEB1A'
     pf_pwd = 'secret1'
     up.remove_user(pf)
-    up.add_user(pf,pf_pwd)
+    up.add_user(pf,'Placi Flury', pf_pwd)
     
     vo_upool = VOUserPool()
     vo_upool.add_user('smscg',pf)
