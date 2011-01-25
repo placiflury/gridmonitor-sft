@@ -121,7 +121,7 @@ class TestSuitPool():
             far in the pool of test suits.
             return: list of test suit objects
         """
-        return self.session.query(schema.TestSuit).filter_by(name=suitname).all()
+        return self.session.query(schema.TestSuit).all()
     
     @strip_args
     def list_tests(self, testsuit):

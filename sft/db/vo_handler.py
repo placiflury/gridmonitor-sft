@@ -50,7 +50,7 @@ class VOPool():
         """ listing of existing VOs in global 'VO' pool 
             returns: list of VO objects
         """
-        return self.session.query(schema.VO).filter_by(name=name).all()
+        return self.session.query(schema.VO).all()
 
 
 class VOGroupPool():
