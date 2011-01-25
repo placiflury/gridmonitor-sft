@@ -51,7 +51,7 @@ class TestPool():
         """ Listing of the currently existing tests.
             Return lists of test objects.
          """
-        return self.session.query(schema.Test).filter_by(name=name).all()
+        return self.session.query(schema.Test).all()
 
     
 
