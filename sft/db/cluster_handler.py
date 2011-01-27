@@ -114,7 +114,22 @@ class ClusterGroupPool():
             self.log.info("Cluster '%s' added to group '%s'." % (clustername, groupname))
             group.clusters.append(cluster) 
         self.session.commit()
+    
+    @strip_args 
+    def remove_cluster(self, groupname, clustername):
+        """ Removing cluster from group.
+            params: groupname - name of group
+                    cluster - name of cluster to remove from group.
+        """
+        group = self.session.query(schema.ClusterGroup).filter_by(name=groupname).first()
+        cluster = self.session.query(schema.Cluster).filter_by(hostname=clustername).first()
+        
+        if group and cluster in group.clusters:
+            group.clusters.remove(cluster)
+            self.log.debug("Removing cluster '%s' from group '%s'." % (clustername, groupname))
+            self.session.commit()
 
+    @strip_args
     def list_clusters(self, groupname):
         """ Listing all clusters of specified groups. 
             params: groupname - name of cluster group to list

@@ -73,6 +73,7 @@ class VOGroupPool():
             self.log.info("VO group '%s' exists already" % groupname)
         else:
             self.session.add(schema.VOGroup(groupname))
+            self.log.info("Created VO group '%s'." % groupname)
             self.session.commit()
     
     @strip_args
@@ -110,6 +111,20 @@ class VOGroupPool():
             group.vos.append(vo) 
         
         self.session.commit()
+    
+    @strip_args 
+    def remove_vo(self, groupname, voname):
+        """ Removing VO from group.
+            params: groupname - name of group
+                    VO - name of VO to remove from group.
+        """
+        group = self.session.query(schema.VOGroup).filter_by(name=groupname).first()
+        vo = self.session.query(schema.VO).filter_by(name=voname).first()
+        
+        if group and vo in group.vos:
+            group.vos.remove(group)
+            self.log.debug("Removed VO '%s' from VO group '%s'." % (voname, groupname))
+            self.session.commit()
 
     @strip_args
     def list_vos(self, groupname):
@@ -158,8 +173,7 @@ class VOUserPool():
         
         if not vo in user.vos:
             user.vos.append(vo) 
-        
-        self.session.commit()
+            self.session.commit()
 
     @strip_args
     def remove_user(self,voname,DN):
@@ -169,14 +183,12 @@ class VOUserPool():
         """
         vo = self.session.query(schema.VO).filter_by(name=voname).first()
         user = self.session.query(schema.User).filter_by(DN=DN).first()
+    
         
-        if not vo or not user:
-            return
-       
-        user.vos.remove(vo) 
-        assert  vo not in user.vos ,'user still member of VO'
-        
-        self.session.commit()
+        if vo and user in vo.users:
+            vo.users.remove(user)
+            self.log.debug("User '%s' removed from VO '%s'." % (DN, voname))
+            self.session.commit()
     
     @strip_args
     def list_users(self,voname):

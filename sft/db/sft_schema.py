@@ -4,7 +4,7 @@ Metadata tables (sqlalchemy) for site functional tests.
 """
 __author__ = "Placi Flury grid@switch.ch"
 __date__ = "08.02.2010"
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 
 import sqlalchemy as sa
 from sqlalchemy.orm import mapper, relationship
@@ -15,30 +15,30 @@ from sft.utils import config_parser, rsa
 
 
 t_cluster = sa.Table("cluster", sft_meta.metadata,
-        sa.Column("hostname", sa.types.VARCHAR(255), primary_key=True),
-        sa.Column("alias", sa.types.VARCHAR(255), nullable=True))
+        sa.Column("hostname", sa.types.VARCHAR(256, convert_unicode=True), primary_key=True),
+        sa.Column("alias", sa.types.VARCHAR(256, convert_unicode=True), nullable=True))
 
 t_cluster_group = sa.Table("cluster_group", sft_meta.metadata,
-        sa.Column("name", sa.types.VARCHAR(255), primary_key=True))
+        sa.Column("name", sa.types.VARCHAR(256, convert_unicode=True), primary_key=True))
 
 t_cluster_group_as = sa.Table("cluster_group_as",  sft_meta.metadata,
         sa.Column("cluster_name", None, sa.ForeignKey('cluster.hostname'), primary_key=True),
         sa.Column("group_name", None, sa.ForeignKey('cluster_group.name'), primary_key=True))
 
 t_vo = sa.Table("vo", sft_meta.metadata,
-        sa.Column("name", sa.types.VARCHAR(127), primary_key=True),
-        sa.Column("server", sa.types.VARCHAR(255), nullable=True))
+        sa.Column("name", sa.types.VARCHAR(128, convert_unicode=True), primary_key=True),
+        sa.Column("server", sa.types.VARCHAR(256, convert_unicode=True), nullable=True))
 
 t_vo_group = sa.Table("vo_group", sft_meta.metadata,
-        sa.Column("name", sa.types.VARCHAR(255), primary_key=True))
+        sa.Column("name", sa.types.VARCHAR(256, convert_unicode=True), primary_key=True))
 
 t_vo_group_as = sa.Table("vo_group_as", sft_meta.metadata,
         sa.Column("vo_name", None, sa.ForeignKey('vo.name'), primary_key=True),
         sa.Column("group_name", None, sa.ForeignKey('vo_group.name'), primary_key=True))
 
 t_user = sa.Table("user", sft_meta.metadata,
-        sa.Column("DN", sa.types.VARCHAR(255),primary_key=True),
-        sa.Column("display_name", sa.types.VARCHAR(50)),
+        sa.Column("DN", sa.types.VARCHAR(256, convert_unicode=True),primary_key=True),
+        sa.Column("display_name", sa.types.VARCHAR(64, convert_unicode=True)),
         sa.Column("passwd",sa.types.Text(),nullable=False))
 
 t_vo_user_as = sa.Table('vo_user_as', sft_meta.metadata,
@@ -46,26 +46,26 @@ t_vo_user_as = sa.Table('vo_user_as', sft_meta.metadata,
         sa.Column("DN", None, sa.ForeignKey('user.DN'),primary_key=True))
 
 t_test = sa.Table("test", sft_meta.metadata,
-        sa.Column("name", sa.types.VARCHAR(127), primary_key=True),
+        sa.Column("name", sa.types.VARCHAR(128, convert_unicode=True), primary_key=True),
         sa.Column("xrsl", sa.types.Text(), nullable=False))
 
 t_test_suit = sa.Table("test_suit", sft_meta.metadata,
-        sa.Column("name", sa.types.VARCHAR(127), primary_key=True))
+        sa.Column("name", sa.types.VARCHAR(128, convert_unicode=True), primary_key=True))
 
 t_test_suit_as = sa.Table("test_suit_as", sft_meta.metadata,
         sa.Column("test_name", None, sa.ForeignKey('test.name'), primary_key=True),
         sa.Column("suit_name", None, sa.ForeignKey('test_suit.name'), primary_key=True))
 
 t_sft_test = sa.Table("sft_test", sft_meta.metadata,
-        sa.Column("name", sa.types.VARCHAR(127), primary_key=True),
+        sa.Column("name", sa.types.VARCHAR(256, convert_unicode=True), primary_key=True),
         sa.Column("cluster_group", None, sa.ForeignKey('cluster_group.name')),
         sa.Column("vo_group", None, sa.ForeignKey('vo_group.name')),
         sa.Column("test_suit", None, sa.ForeignKey('test_suit.name')),
-        sa.Column("minute", sa.types.VARCHAR(127), default='0'),
-        sa.Column("hour", sa.types.VARCHAR(127), default='*'),
-        sa.Column("day", sa.types.VARCHAR(127), default='*'),
-        sa.Column("month", sa.types.VARCHAR(127), default='*'),
-        sa.Column("day_of_week", sa.types.VARCHAR(127), default='*'))
+        sa.Column("minute", sa.types.VARCHAR(32, convert_unicode=True), default='0'),
+        sa.Column("hour", sa.types.VARCHAR(32, convert_unicode=True), default='*'),
+        sa.Column("day", sa.types.VARCHAR(32, convert_unicode=True), default='*'),
+        sa.Column("month", sa.types.VARCHAR(32, convert_unicode=True), default='*'),
+        sa.Column("day_of_week", sa.types.VARCHAR(32, convert_unicode=True), default='*'))
 
 
 t_sft_job = sa.Table("sft_job", sft_meta.metadata,
@@ -75,11 +75,11 @@ t_sft_job = sa.Table("sft_job", sft_meta.metadata,
         sa.Column('vo_name', None, sa.ForeignKey('vo.name')),
         sa.Column('test_name', None, sa.ForeignKey('test_suit.name')),
         sa.Column('DN', None, sa.ForeignKey('user.DN')),
-        sa.Column('jobid', sa.types.VARCHAR(255)),
-        sa.Column('error_type', sa.types.VARCHAR(127), default=None),
+        sa.Column('jobid', sa.types.VARCHAR(256, convert_unicode=True)),
+        sa.Column('error_type', sa.types.VARCHAR(128, convert_unicode=True), default=None),
         sa.Column('error_msg', sa.types.Text()),
-        sa.Column('outputdir',sa.types.VARCHAR(255)),
-        sa.Column('status', sa.types.VARCHAR(63), default=None),
+        sa.Column('outputdir',sa.types.VARCHAR(256, convert_unicode=True)),
+        sa.Column('status', sa.types.VARCHAR(63, convert_unicode=True), default=None),
         sa.Column("submissiontime",sa.types.DateTime, default=datetime.utcnow),
         sa.Column("db_lastmodified",sa.types.DateTime, default=datetime.utcnow)
 )

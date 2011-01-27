@@ -74,7 +74,7 @@ class SFTPool():
         """
         sft = self.session.query(schema.SFTTest).filter_by(name=name).first()
         if sft:
-            self.log.debug("Removing sft '%s'." % name)
+            self.log.info("Removing sft '%s'." % name)
             self.session.delete(sft)   
             self.session.commit()
 

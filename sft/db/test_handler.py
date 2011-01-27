@@ -28,7 +28,7 @@ class TestPool():
         if test:
             self.log.info("Test '%s' exists already, updating" % name)
             if test.xrsl != xrsl:
-                test.xrsl = xrsl
+                test.xsl = xrsl
         else:
             self.log.debug("Adding test '%s'." % name)
             test = schema.Test(name,xrsl)
@@ -37,13 +37,13 @@ class TestPool():
         self.session.commit() 
 
     @strip_args
-    def remove_vo(self, name):
+    def remove_test(self, name):
         """ Removing a test from the pool of tests.
             params: name - name of the test to remove
         """
         test = self.session.query(schema.Test).filter_by(name=name).first()
-        if vo:
-            self.log.debug("Removing test '%s'." % name)
+        if test:
+            self.log.info("Removing test '%s'." % name)
             self.session.delete(test)   
             self.session.commit()
 
@@ -76,6 +76,7 @@ class TestSuitPool():
             self.log.info("Test suit '%s' exists already" % suitname)
         else:
             self.session.add(schema.TestSuit(suitname))
+            self.log.info("Created test suit '%s'" % suitname)
             self.session.commit()
 
 
@@ -86,7 +87,7 @@ class TestSuitPool():
         """
         suit = self.session.query(schema.TestSuit).filter_by(name=suitname).first()
         if suit:
-            self.log.debug("Removing suit '%s'." % suitname)
+            self.log.info("Removing suit '%s'." % suitname)
             self.session.delete(suit)
             self.session.commit()
              
@@ -115,6 +116,19 @@ class TestSuitPool():
             suit.tests.append(test) 
         
         self.session.commit()
+    
+    @strip_args
+    def remove_test(self, suitname, testname):
+        """ Removing a test from test suit.
+            params: suitname - name of the test suit
+                    testname - name of test to remove
+        """
+        suit = self.session.query(schema.TestSuit).filter_by(name=suitname).first()
+        test = self.session.query(schema.Test).filter_by(name=testname).first()
+        if suit and test in suit.tests:
+            self.log.debug("Removing test %s from suit '%s'." % (testname, suitname))
+            suit.tests.remove(test)
+            self.session.commit()
         
     def list_testsuits(self):
         """ Listing all test suits that have been defined so 
@@ -124,7 +138,7 @@ class TestSuitPool():
         return self.session.query(schema.TestSuit).all()
     
     @strip_args
-    def list_tests(self, suitname):
+    def list_tests(self, testsuit):
         """ Listing all test belonging to testsuit.
             return: list of test objects, or None (e.g. if testsuit does not exist)
         """
