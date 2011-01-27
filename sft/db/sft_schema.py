@@ -52,13 +52,8 @@ t_vo_user_as = sa.Table('vo_user_as', sft_meta.metadata,
         sa.Column("DN", None, sa.ForeignKey('user.DN'),primary_key=True))
 
 t_test = sa.Table("test", sft_meta.metadata,
-<<<<<<< .mine
         sa.Column("name", sa.types.VARCHAR(64, convert_unicode=True), primary_key=True),
         sa.Column("xrsl", sa.types.Text(convert_unicode=True), nullable=False))
-=======
-        sa.Column("name", sa.types.VARCHAR(128, convert_unicode=True), primary_key=True),
-        sa.Column("xrsl", sa.types.Text(convert_unicode=True), nullable=False))
->>>>>>> .r396
 
 t_test_suit = sa.Table("test_suit", sft_meta.metadata,
         sa.Column("name", sa.types.VARCHAR(64, convert_unicode=True), primary_key=True))
