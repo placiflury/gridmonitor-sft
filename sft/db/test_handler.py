@@ -28,7 +28,7 @@ class TestPool():
         if test:
             self.log.info("Test '%s' exists already, updating" % name)
             if test.xrsl != xrsl:
-                test.xsl = xrsl
+                test.xrsl = xrsl
         else:
             self.log.debug("Adding test '%s'." % name)
             test = schema.Test(name,xrsl)
@@ -124,7 +124,7 @@ class TestSuitPool():
         return self.session.query(schema.TestSuit).all()
     
     @strip_args
-    def list_tests(self, testsuit):
+    def list_tests(self, suitname):
         """ Listing all test belonging to testsuit.
             return: list of test objects, or None (e.g. if testsuit does not exist)
         """
