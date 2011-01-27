@@ -82,6 +82,6 @@ class SFTPool():
         """ Listing of all existing SFTs in pool.
             returns list of SFT objects
         """
-        return self.session.query(schema.SFTTest).filter_by(name=name).all()
+        return self.session.query(schema.SFTTest).all()
     
 
