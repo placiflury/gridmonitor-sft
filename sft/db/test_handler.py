@@ -138,7 +138,7 @@ class TestSuitPool():
         return self.session.query(schema.TestSuit).all()
     
     @strip_args
-    def list_tests(self, testsuit):
+    def list_tests(self, suitname):
         """ Listing all test belonging to testsuit.
             return: list of test objects, or None (e.g. if testsuit does not exist)
         """

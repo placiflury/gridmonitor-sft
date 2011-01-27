@@ -47,7 +47,7 @@ t_vo_user_as = sa.Table('vo_user_as', sft_meta.metadata,
 
 t_test = sa.Table("test", sft_meta.metadata,
         sa.Column("name", sa.types.VARCHAR(128, convert_unicode=True), primary_key=True),
-        sa.Column("xrsl", sa.types.Text(), nullable=False))
+        sa.Column("xrsl", sa.types.Text(convert_unicode=True), nullable=False))
 
 t_test_suit = sa.Table("test_suit", sft_meta.metadata,
         sa.Column("name", sa.types.VARCHAR(128, convert_unicode=True), primary_key=True))
