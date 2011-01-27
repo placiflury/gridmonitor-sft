@@ -28,7 +28,7 @@ class TestPool():
         if test:
             self.log.info("Test '%s' exists already, updating" % name)
             if test.xrsl != xrsl:
-                test.xsl = xrsl
+                test.xrsl = xrsl
         else:
             self.log.debug("Adding test '%s'." % name)
             test = schema.Test(name,xrsl)

@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# -*- coding: utf-8  -*-
+
 """
 Populate SFT database with tests
 """
@@ -30,74 +32,74 @@ if __name__ == "__main__":
     
     
     cl = ClusterPool()
-    cl.add_cluster(u'bacchus.switch.ch', u'SMSCG - TEST - SWITCH')
-    cl.add_cluster(u'alemonia.switch.ch', u'SMSCG - T2')
+    cl.add_cluster('bacchus.switch.ch', 'SMSCG - TEST - SWITCH')
+    cl.add_cluster('alemonia.switch.ch', 'SMSCG - T2')
 
     cl_grp = ClusterGroupPool()
     cl_grp.create_group("smscg_clusters")
-    cl_grp.add_cluster(u'smscg_clusters',u'alemnia.switch.ch') 
-    cl_grp.add_cluster(u'smscg_clusters',u'bacchus.switch.ch') 
+    cl_grp.add_cluster('smscg_clusters','alemnia.switch.ch') 
+    cl_grp.add_cluster('smscg_clusters','bacchus.switch.ch') 
 
     vo = VOPool()
-    vo.add_vo(u'smscg',u'voms.smscg.ch')
-    vo.add_vo(u'atlas',u'voms.cern.ch')
+    vo.add_vo('smscg','voms.smscg.ch')
+    vo.add_vo('atlas','voms.cern.ch')
    
      
     vo_grp = VOGroupPool()
-    vo_grp.create_group(u'noRTEpool')
-    vo_grp.add_vo(u'noRTEpool',u'smscg')
-    vo_grp.add_vo(u'noRTEpool',u'atlas')
+    vo_grp.create_group('noRTEpool')
+    vo_grp.add_vo('noRTEpool','smscg')
+    vo_grp.add_vo('noRTEpool','atlas')
     
 
     up = UserPool()
-    pf = u'/DC=ch/DC=switch/DC=slcs/O=Switch - Teleinformatikdienste fuer Lehre und Forschung/CN=Placi Flury C82EEB1A'
-    pf_pwd = u'secret1'
+    pf = '/DC=ch/DC=switch/DC=slcs/O=Switch - Teleinformatikdienste fuer Lehre und Forschung/CN=Placi Flury C82EEB1A'
+    pf_pwd = 'secret1'
     up.remove_user(pf)
-    up.add_user(pf,u'Placi Flury', pf_pwd)
+    up.add_user(pf,'Placi Flury', pf_pwd)
     
     vo_upool = VOUserPool()
-    vo_upool.add_user(u'smscg',pf)
-    vo_upool.add_user(u'atlas',pf)
+    vo_upool.add_user('smscg',pf)
+    vo_upool.add_user('atlas',pf)
 
     tst = TestPool()
     xrsl = ""
     with open("./test/job1.xrsl") as f:
         for line in f.readlines():
             xrsl += line
-    tst.add_test(u'test1',xrsl)
+    tst.add_test('test1',xrsl)
     
     xrsl2 = ""
     with open("./test/job2.xrsl") as f:
         for line in f.readlines():
             xrsl2 += line
-    tst.add_test(u'test2',xrsl2)
+    tst.add_test('test2',xrsl2)
    
     smscg_sft01_xrsl = ""
     with open("./test/smscg_sft01.xrsl") as f:
         for line in f.readlines():
             smscg_sft01_xrsl += line
-    tst.add_test(u'smscg_sft1', smscg_sft01_xrsl)
+    tst.add_test('smscg_sft1', smscg_sft01_xrsl)
     
     smscg_sft02_xrsl = ""
     with open("./test/smscg_sft02.xrsl") as f:
         for line in f.readlines():
             smscg_sft02_xrsl += line
-    tst.add_test(u'smscg_sft2', smscg_sft02_xrsl)
+    tst.add_test('smscg_sft2', smscg_sft02_xrsl)
 
 
  
     tst_suit = TestSuitPool()
-    tst_suit.create_suit(u'arc_std_suit')
-    tst_suit.add_test(u'arc_std_suit',u'test1') 
-    tst_suit.add_test(u'arc_std_suit',u'test2') 
+    tst_suit.create_suit('arc_std_suit')
+    tst_suit.add_test('arc_std_suit','test1') 
+    tst_suit.add_test('arc_std_suit','test2') 
    
-    tst_suit.create_suit(u'smscg_std_suit')
-    tst_suit.add_test(u'smscg_std_suit',u'smscg_sft1') 
-    tst_suit.add_test(u'smscg_std_suit',u'smscg_sft2') 
+    tst_suit.create_suit('smscg_std_suit')
+    tst_suit.add_test('smscg_std_suit','smscg_sft1') 
+    tst_suit.add_test('smscg_std_suit','smscg_sft2') 
     
     sft = SFTPool()
-    sft.add_sft(u'arc_std_sft',u'smscg_clusters', u'noRTEpool',u'arc_std_suit')
-    sft.set_exectime(u'arc_std_sft', minute=u'1', hour=u'2', day=u'1', month= u'*/1')
-    sft.add_sft(u'smscg_std_sft',u'smscg_clusters', u'noRTEpool',u'smscg_std_suit')
-    sft.set_exectime(u'smscg_std_sft', minute=u'23', hour=u'9', day=u'*/1', month= u'*/1')
+    sft.add_sft('arc_std_sft','smscg_clusters', 'noRTEpool','arc_std_suit')
+    sft.set_exectime('arc_std_sft', minute='1', hour='2', day='1', month= '*/1')
+    sft.add_sft('smscg_std_sft','smscg_clusters', 'noRTEpool','smscg_std_suit')
+    sft.set_exectime('smscg_std_sft', minute='23', hour='9', day='*/1', month= '*/1')
  
