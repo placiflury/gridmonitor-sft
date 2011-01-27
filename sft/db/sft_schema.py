@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 """
 Metadata tables (sqlalchemy) for site functional tests.
+
+Notice for potential extension: we are using foreign primary keys for the association
+tables. MySQL has a key size limit for keys, hence, when using a utf-8 encoded
+database, one is about to hit the limiting threshold. 
+If you consider extending the schema, one may consider replacing the current 'foreign'
+primary keys of the associative tables, by an autoincreted Integer key.
 """
 __author__ = "Placi Flury grid@switch.ch"
 __date__ = "08.02.2010"
@@ -15,22 +21,22 @@ from sft.utils import config_parser, rsa
 
 
 t_cluster = sa.Table("cluster", sft_meta.metadata,
-        sa.Column("hostname", sa.types.VARCHAR(256, convert_unicode=True), primary_key=True),
-        sa.Column("alias", sa.types.VARCHAR(256, convert_unicode=True), nullable=True))
+        sa.Column("hostname", sa.types.VARCHAR(128, convert_unicode=True), primary_key=True),
+        sa.Column("alias", sa.types.VARCHAR(128, convert_unicode=True), nullable=True))
 
 t_cluster_group = sa.Table("cluster_group", sft_meta.metadata,
-        sa.Column("name", sa.types.VARCHAR(256, convert_unicode=True), primary_key=True))
+        sa.Column("name", sa.types.VARCHAR(64, convert_unicode=True), primary_key=True))
 
 t_cluster_group_as = sa.Table("cluster_group_as",  sft_meta.metadata,
         sa.Column("cluster_name", None, sa.ForeignKey('cluster.hostname'), primary_key=True),
         sa.Column("group_name", None, sa.ForeignKey('cluster_group.name'), primary_key=True))
 
 t_vo = sa.Table("vo", sft_meta.metadata,
-        sa.Column("name", sa.types.VARCHAR(128, convert_unicode=True), primary_key=True),
-        sa.Column("server", sa.types.VARCHAR(256, convert_unicode=True), nullable=True))
+        sa.Column("name", sa.types.VARCHAR(64, convert_unicode=True), primary_key=True),
+        sa.Column("server", sa.types.VARCHAR(128, convert_unicode=True), nullable=True))
 
 t_vo_group = sa.Table("vo_group", sft_meta.metadata,
-        sa.Column("name", sa.types.VARCHAR(256, convert_unicode=True), primary_key=True))
+        sa.Column("name", sa.types.VARCHAR(64, convert_unicode=True), primary_key=True))
 
 t_vo_group_as = sa.Table("vo_group_as", sft_meta.metadata,
         sa.Column("vo_name", None, sa.ForeignKey('vo.name'), primary_key=True),
@@ -46,18 +52,23 @@ t_vo_user_as = sa.Table('vo_user_as', sft_meta.metadata,
         sa.Column("DN", None, sa.ForeignKey('user.DN'),primary_key=True))
 
 t_test = sa.Table("test", sft_meta.metadata,
+<<<<<<< .mine
+        sa.Column("name", sa.types.VARCHAR(64, convert_unicode=True), primary_key=True),
+        sa.Column("xrsl", sa.types.Text(convert_unicode=True), nullable=False))
+=======
         sa.Column("name", sa.types.VARCHAR(128, convert_unicode=True), primary_key=True),
         sa.Column("xrsl", sa.types.Text(convert_unicode=True), nullable=False))
+>>>>>>> .r396
 
 t_test_suit = sa.Table("test_suit", sft_meta.metadata,
-        sa.Column("name", sa.types.VARCHAR(128, convert_unicode=True), primary_key=True))
+        sa.Column("name", sa.types.VARCHAR(64, convert_unicode=True), primary_key=True))
 
 t_test_suit_as = sa.Table("test_suit_as", sft_meta.metadata,
         sa.Column("test_name", None, sa.ForeignKey('test.name'), primary_key=True),
         sa.Column("suit_name", None, sa.ForeignKey('test_suit.name'), primary_key=True))
 
 t_sft_test = sa.Table("sft_test", sft_meta.metadata,
-        sa.Column("name", sa.types.VARCHAR(256, convert_unicode=True), primary_key=True),
+        sa.Column("name", sa.types.VARCHAR(64, convert_unicode=True), primary_key=True),
         sa.Column("cluster_group", None, sa.ForeignKey('cluster_group.name')),
         sa.Column("vo_group", None, sa.ForeignKey('vo_group.name')),
         sa.Column("test_suit", None, sa.ForeignKey('test_suit.name')),
@@ -76,10 +87,10 @@ t_sft_job = sa.Table("sft_job", sft_meta.metadata,
         sa.Column('test_name', None, sa.ForeignKey('test_suit.name')),
         sa.Column('DN', None, sa.ForeignKey('user.DN')),
         sa.Column('jobid', sa.types.VARCHAR(256, convert_unicode=True)),
-        sa.Column('error_type', sa.types.VARCHAR(128, convert_unicode=True), default=None),
+        sa.Column('error_type', sa.types.VARCHAR(64, convert_unicode=True), default=None),
         sa.Column('error_msg', sa.types.Text()),
         sa.Column('outputdir',sa.types.VARCHAR(256, convert_unicode=True)),
-        sa.Column('status', sa.types.VARCHAR(63, convert_unicode=True), default=None),
+        sa.Column('status', sa.types.VARCHAR(64, convert_unicode=True), default=None),
         sa.Column("submissiontime",sa.types.DateTime, default=datetime.utcnow),
         sa.Column("db_lastmodified",sa.types.DateTime, default=datetime.utcnow)
 )

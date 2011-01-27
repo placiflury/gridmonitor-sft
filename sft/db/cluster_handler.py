@@ -20,7 +20,8 @@ class ClusterPool():
         self.log.debug("Initialization finished")
     
     def __del__(self):
-        self.session.close()
+        if self.session:
+            self.session.close()
 
     @strip_args
     def add_cluster(self, hostname, alias=None):

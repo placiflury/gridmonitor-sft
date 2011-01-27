@@ -122,7 +122,7 @@ class VOGroupPool():
         vo = self.session.query(schema.VO).filter_by(name=voname).first()
         
         if group and vo in group.vos:
-            group.vos.remove(group)
+            group.vos.remove(vo)
             self.log.debug("Removed VO '%s' from VO group '%s'." % (voname, groupname))
             self.session.commit()
 
