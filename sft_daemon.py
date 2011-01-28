@@ -16,6 +16,7 @@ from sqlalchemy import engine_from_config
 import sft.utils.config_parser as config_parser
 from sft.daemon import Daemon
 from sft.utils import init_config
+from sft.utils.helpers import * 
 from sft.db import init_model
 import sft.db.sft_meta as meta
 import sft.db.sft_schema as schema
@@ -104,77 +105,19 @@ class SFTDaemon(Daemon):
             daemon.restart()
             self.log.info("restarted")
 
-    def _parse_cron(self, str, max):
-        """
-        parsing *simple* crontab style entries. 
-        covered cases:
-
-         - integer up to max
-         - lists  '1,2,3' 
-         - ranges  '1-3'
-         - steps   '*/4' or '1-4/2'
-         - mix list and range '1,2,3,8-12'
-
-        XXX improve (currently no error handling, input checking  etc.)
-        """
-        if str.isdigit():
-            v = int(str)
-            if v > max:
-                return max
-            return v
-
-        if '/' in str: # step
-            pre = str.split('/')[0]
-            step = int(str.split('/')[1])
-            if pre == '*':
-                return range(0, max+1, step)
-
-            if '-' in pre:
-                start = int(pre.split('-')[0])        
-                end = int(pre.split('-')[1])
-                if end > max:
-                    end = max
-                return range(start, end+1, step)
-           
-        if ('-' in str) and (',' in str):
-            res = list()
-            for i in str.split(','):
-                v = self._parse_cron(i, max) 
-                if type(v) is int:
-                    res.append(v)
-                else:
-                    res += v
-            if res:
-                return res
- 
-        if ',' in str:
-            res = list()
-            for i in str.split(','):
-                if i.isdigit():
-                    v = int(i)
-                    if v > max:
-                        res.append(max)
-                    else: 
-                        res.append(v)     
-            return res
-        
-        if '-' in str:
-            start = int(str.split('-')[0])        
-            end = int(str.split('-')[1])
-            if end > max:
-                end = max
-            return range(start, end+1, 1)
 
 
     def reset_sft_events(self):
+        # we expect that the cron-job input(s) has been 
+        # checked before already! thus no error handling -> XXX be conservative? 
         self.sft_events = list()
         session = meta.Session()
         for sft in session.query(schema.SFTTest).all():
-            minute = self._parse_cron(sft.minute, 59)
-            hour = self._parse_cron(sft.hour, 23)
-            day = self._parse_cron(sft.day, 31)
-            month = self._parse_cron(sft.month, 12)
-            dow = self._parse_cron(sft.day_of_week, 7)
+            minute = parse_cron_entry(sft.minute, 59)
+            hour = parse_cron_entry(sft.hour, 23)
+            day = parse_cron_entry(sft.day, 31)
+            month = parse_cron_entry(sft.month, 12)
+            dow = parse_cron_entry(sft.day_of_week, 6)
 
             event = SFT_Event(sft.name,
                     minute = minute, hour = hour,

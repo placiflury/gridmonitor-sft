@@ -4,7 +4,7 @@ from distutils.core import setup
 
 setup(
     name = "smscg_sft",
-    version = "0.3.0",
+    version = "0.3.1",
     description = "Site Functional Tests (SFT) module for the SMSCG GridMonitor.",
     long_description = """
 	This module provides a daemon that runs Site Functional Tests. The SFTs are
