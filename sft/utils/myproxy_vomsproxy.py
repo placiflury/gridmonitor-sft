@@ -10,7 +10,7 @@ import config_parser
 import os, os.path, stat
 from M2Crypto import X509
 import time, calendar
-import myproxy
+import myproxyclient
 import subprocess
 
 
@@ -22,7 +22,8 @@ class ProxyUtil(object):
         self.proxy_dir = config_parser.config.get('proxy_dir')
         self.min_vomsproxy_valid_hours = int(config_parser.config.get('min_vomsproxy_valid_hours'))
         self.min_myproxy_valid_hours = int(config_parser.config.get('min_myproxy_valid_hours'))
-        self.myproxy = myproxy.MyProxyLogon()
+        
+        self.myproxy = myproxyclient.MyProxyClient()
     
     def get_proxy_dir(self):
         """ return proxy directory """
@@ -79,7 +80,7 @@ class ProxyUtil(object):
                 return False
                 
         except Exception, e:
-            self.log.error("Could not get myproxy cert for '%s', got '%r'" % (DN, e))
+            self.log.error("Could not get myproxy cert for '%r', got '%r'" % (DN, e))
             self.last_error_msg = e.__repr__()
             return False
 

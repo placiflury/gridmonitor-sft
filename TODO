@@ -1,4 +1,6 @@
 TODOs:
 
 - add admin interface to gridmonitor 
+- use myproxy lib 
+- allow 'restart/refresh' of daemon when sfts have been changed via GridMonitor web-interface
 

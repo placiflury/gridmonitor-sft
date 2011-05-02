@@ -50,9 +50,9 @@ class SFTDaemon(Daemon):
         usage = "usage: %prog [options] start|stop|restart \n\nDo %prog -h for more help."
         parser = OptionParser(usage=usage, version ="%prog " + __version__)
         parser.add_option("" , "--config_file", action="store",
-            dest="config_file", type="string",
-            default="/opt/smscg/sft/etc/config.ini",
-            help="File holding the sft specific configuration for this site (default=%default)")
+            dest = "config_file", type="string",
+            default = "/opt/smscg/sft/etc/config.ini",
+            help = "File holding the sft specific configuration for this site (default=%default)")
 
         (options, args) = parser.parse_args()
         self.log.debug("Invocation with args: %r and options: %r" % (args, options))
