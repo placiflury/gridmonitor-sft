@@ -15,7 +15,8 @@ class RSACipher():
         return decrypted
 
     def priv_public_encrypt(self, data):
-        encrypted =  self.priv_key.public_encrypt(data, RSA.pkcs1_padding)
+        _data = data.encode('utf-8')
+        encrypted =  self.priv_key.public_encrypt(_data, RSA.pkcs1_padding)
         return binascii.b2a_hex(encrypted)
 
     def public_encrypt(self, data):
@@ -29,7 +30,7 @@ class RSACipher():
 
 if __name__ == '__main__':
     
-    ndata = 'fifi goes home'
+    ndata = u'lap1ns1'
     rc = RSACipher('/etc/grid-security/hostkey_root.pem') 
     encdata = rc.priv_public_encrypt(ndata)
     fn = 'gugus.txt'
@@ -42,5 +43,6 @@ if __name__ == '__main__':
     t = open(fn,'rb')    
     encdata = t.readline()
     decdata = rc.private_decrypt(encdata)
+    print ">%r<" % decdata
     assert ndata == decdata , 'decrypted data matches not original data'
     t.close()    

@@ -44,7 +44,7 @@ class ProxyUtil(object):
                 x509 = X509.load_cert(pfile, X509.FORMAT_PEM)
                 enddate = x509.get_not_after().__str__()
             except Exception, e:
-                self.log.error("Loading voms_proxy '%s' got '%r'" % (pfile, e))
+                self.log.error("Loading voms_proxy '%s' got '%s'" % (pfile, e))
                 self.last_error_msg = e.__repr__()
                 return False
          
@@ -72,7 +72,6 @@ class ProxyUtil(object):
                     os.chmod(pfile, stat.S_IRUSR | stat.S_IWUSR) # else ngsub complains
                     return True
          
-                #error = ret_msg[1]
                 error = ret_msg
                 self.log.error("Requesting voms proxy for '%s' (VO: %s), got: %s" %
                     (DN, vo_name, error))
@@ -80,8 +79,8 @@ class ProxyUtil(object):
                 return False
                 
         except Exception, e:
-            self.log.error("Could not get myproxy cert for '%r', got '%r'" % (DN, e))
-            self.last_error_msg = e.__repr__()
+            self.log.error("Could not get myproxy cert for '%s', got '%s'" % (DN, e))
+            self.last_error_msg = e.__str__()
             return False
 
 
@@ -97,8 +96,8 @@ class ProxyUtil(object):
                 x509 = X509.load_cert(myproxy_file, X509.FORMAT_PEM)
                 enddate = x509.get_not_after().__str__()
             except Exception, e:
-                self.log.error("Loading myproxy '%s' got '%r'" % (myproxy_file, e))
-                self.last_error_msg = e.__repr__()
+                self.log.error("Loading myproxy '%s' got '%s'" % (myproxy_file, e))
+                self.last_error_msg = e.__str__()
                 return False
          
             enddate_tuple = time.strptime(enddate,'%b %d %H:%M:%S %Y GMT')
@@ -111,11 +110,11 @@ class ProxyUtil(object):
             if remaining_hours > self.min_myproxy_valid_hours:
                 return True
         try:
-            self.myproxy.myproxy_logon(DN, passwd, myproxy_file)
+            self.myproxy.myproxy_logon(DN.encode('utf-8'), passwd, myproxy_file)
             os.chmod(myproxy_file, stat.S_IRUSR | stat.S_IWUSR) # else voms-proxy complains
             return True
         except Exception, e:
-            self.log.error("Could not get myproxy cert for '%s', got '%r'" % (DN, e))
+            self.log.error("Could not get myproxy cert for '%s', got '%s'" % (DN, e))
             self.last_error_msg = e.__repr__()
             return False
          

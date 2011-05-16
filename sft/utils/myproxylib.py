@@ -20,12 +20,12 @@ class MyProxyError(Exception):
         message -- explanation of error 
     """
     def __init__(self, expression, message):
+        Exception.__init__(self)
         self.expression = expression
         self.message = message
-        Exception.__init__(self)
 
     def __str__(self):
-        return self.message
+        return repr (self.message)
 
 class MyProxyInputError(MyProxyError):
     """ Raised for wrong input parameters (types, values etc.)"""
@@ -45,12 +45,12 @@ class CredentialError(Exception):
         message -- explanation of error 
     """
     def __init__(self, expression, message):
+        Exception.__init__(self)
         self.expression = expression
         self.message = message
-        Exception.__init__(self)
 
     def __str__(self):
-        return self.message
+        return repr(self.message)
     
 class UserCredentialError(CredentialError):
     """ Raised for errors with user credentials. """

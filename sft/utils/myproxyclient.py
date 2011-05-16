@@ -51,6 +51,7 @@ class MyProxyClient(object):
             self.log.error("Keyfile '%s' not owned by user runnig process ('%d')" % (self._keyfile, user_id))
 
         self._my_proxy = MyProxy(host, port)
+        self.log.debug("MyProxy: %s:%s with creds: %s %s." % (host, port, self._certfile, self._keyfile))
         
 
     def set_certfile(self, certfile):
@@ -69,7 +70,6 @@ class MyProxyClient(object):
         """
 
         self._my_proxy.init_context(self._certfile, self._keyfile)
-
         proxy_credential= self._my_proxy.get(username, passphrase)
 
         if not outfile:
