@@ -60,6 +60,7 @@ class SFT_Event(object):
         self.proxy_util = ProxyUtil()
         self.last_error_msg = None
         self.log.debug("Initialization finished")
+        self.clusters_down = []
 
     def set_ngsub_path(self, path):
         """ overwrite default path for ngsub command """
@@ -100,7 +101,12 @@ class SFT_Event(object):
             if not clg:
                 self.log.warn("SFT test '%s' has no clusters specified." % self.sft_name)
             else:
-                clusters = clg.clusters
+                _clusters = clg.clusters
+                clusters = list()
+                for cl in _clusters:
+                    if cl not in self.clusters_down:
+                        clusters.append(cl)
+
 
             tsts = self.session.query(schema.TestSuit).filter_by(name=sft.test_suit).first()
             if not tsts:
@@ -157,10 +163,19 @@ class SFT_Event(object):
         return False, dict(error_type=error_type, error_msg=error_msg)
 
 
+    def set_clusters_down(self, clusters):
+        """ Set's the list of clusters that are currently
+            on scheduled downtime. 
+        """
+        self.clusters_down = clusters
+
     def check_exec(self, t):
         """ checks whether it's time to execute sft event. """
         if self.matchtime(t):
+            self.log.info("XXX yes time maches")
             vos, clusters, tests = self.get_sft_details()
+
+            self.log.info("XXX got details")
             for vo in vos:
                 if not vo.users:  # not an error
                     continue

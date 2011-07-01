@@ -7,11 +7,18 @@ __author__ = "Placi Flury placi.flury@switch.ch"
 __date__ = "19.02.2010"
 __version__ = "0.1.0"
 
-import logging, logging.config
-import sys, time 
+import logging
+import logging.config
+import sys
+import time 
 from optparse import OptionParser
 from datetime import datetime, timedelta
 from sqlalchemy import engine_from_config
+
+# using gridmontior model to get access to nagios ndoutils db
+from gridmonitor.model.nagios import init_model as init_nagios_model
+from gridmonitor.model.nagios import meta as nagios_meta
+from gridmonitor.model.nagios import scheduleddowntimes
 
 import sft.utils.config_parser as config_parser
 from sft.daemon import Daemon
@@ -23,6 +30,8 @@ import sft.db.sft_schema as schema
 from sft.sft_event import SFT_Event
 from sft.publisher import Publisher
 from sft.dbcleaner import Cleanex
+
+
 
 class SFTDaemon(Daemon):
     """ Daemon for Site Functional Tests (SFTs) """
@@ -36,11 +45,16 @@ class SFTDaemon(Daemon):
         try:
             sft_engine = engine_from_config(config_parser.config.get(), 'sqlalchemy_sft.')
             init_model(sft_engine)
-            self.log.info("Session object to local database created")
+            self.log.info("SFT DB connection initialized")
+
+            nagios_engine = engine_from_config(config_parser.config.get(), 'sqlalchemy_nagios.')
+            init_nagios_model(nagios_engine)
+            self.log.info('Nagios DB connection initialized')
+
         except Exception, e:
             self.log.error("Session object to local database failed: %r", e)
 
-        self.reset_sft_events() # read SFT events
+        self.refresh_sft_events() # read SFT events
         self.publisher = Publisher(self.jobsdir, self.url_root)
         self.publisher.set_ngstat_ngget_path(self.ng_commands_path)
         self.cleaner = Cleanex(self.max_jobs_age, self.url_root)
@@ -90,6 +104,7 @@ class SFTDaemon(Daemon):
         self.max_jobs_age = int(max_jobs_age)
 
         self.ng_commands_path = config_parser.config.get('ng_commands_path')
+        self.sft_refresh_period = int(config_parser.config.get('refresh_period'))
 
     def change_state(self):
         if self.command == 'start':
@@ -106,33 +121,67 @@ class SFTDaemon(Daemon):
             self.log.info("restarted")
 
 
-
-    def reset_sft_events(self):
+    def refresh_sft_events(self):
         # we expect that the cron-job input(s) has been 
         # checked before already! thus no error handling -> XXX be conservative? 
         self.sft_events = list()
         session = meta.Session()
+        
+        down_clusters = self.get_downtime_hosts()
+
+
         for sft in session.query(schema.SFTTest).all():
-            minute = parse_cron_entry(sft.minute, 59)
-            hour = parse_cron_entry(sft.hour, 23)
-            day = parse_cron_entry(sft.day, 31)
-            month = parse_cron_entry(sft.month, 12)
-            dow = parse_cron_entry(sft.day_of_week, 6)
+            _minute = parse_cron_entry(sft.minute, 59)
+            _hour = parse_cron_entry(sft.hour, 23)
+            _day = parse_cron_entry(sft.day, 31)
+            _month = parse_cron_entry(sft.month, 12)
+            _dow = parse_cron_entry(sft.day_of_week, 6)
 
             event = SFT_Event(sft.name,
-                    minute = minute, hour = hour,
-                    day = day, month = month,
-                    dow = dow)
+                    minute = _minute, hour = _hour,
+                    day = _day, month = _month,
+                    dow = _dow)
             event.set_ngsub_path(self.ng_commands_path)
+            event.set_clusters_down(down_clusters)
             self.sft_events.append(event)
+            
+
+    def get_downtime_hosts(self):
+        """ Getting list of hosts with current downtime
+            from nagios (ndoutils) database. 
+        """
+        hosts = list()
+        
+        now = datetime.now() # not UTC as nagios is using local time
+
+        for sched_item in nagios_meta.Session().query(scheduleddowntimes.ScheduledDownTime).all():
+            
+            if sched_item.scheduled_start_time > now:
+                continue
+            if sched_item.scheduled_end_time < now:
+                continue
+            
+            _host = sched_item.generic_object.name1
+            if _host not in hosts:
+                hosts.append(_host)
+
+
+        self.log.debug("Hosts currently scheduled down: %r" % hosts)
+        return hosts
 
 
     def run(self):
         t = datetime(*datetime.utcnow().timetuple()[:5])
         
-        check_counter = SFTDaemon.CHECK_JOBS_EVERY_MINUTES  
+        _jb_check_cnt = SFTDaemon.CHECK_JOBS_EVERY_MINUTES  
+        _sft_refresh_cnt = self.sft_refresh_period
 
         while True:
+            if _sft_refresh_cnt <= 0:
+                self.log.debug("refreshing list of SFTs")
+                self.refresh_sft_events()
+                _sft_refresh_cnt = self.sft_refresh_period
+
             for e in self.sft_events:
                 self.log.debug("Checking SFT event '%s'" % e.get_name())
                 e.check_exec(t)
@@ -144,12 +193,14 @@ class SFTDaemon(Daemon):
                 time.sleep(s)
                 n = datetime.utcnow()
             
-            if check_counter <= 0:
+            if _jb_check_cnt <= 0:
                 self.publisher.main()
                 self.cleaner.check_jobs()
-                check_counter = SFTDaemon.CHECK_JOBS_EVERY_MINUTES 
+                _jb_check_cnt = SFTDaemon.CHECK_JOBS_EVERY_MINUTES 
                 continue
-            check_counter -= 1            
+
+            _jb_check_cnt -= 1            
+            _sft_refresh_cnt -= 1
             
 
 if __name__ == "__main__":

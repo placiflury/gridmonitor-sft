@@ -1,7 +1,9 @@
 """
 Cleans up old sft job records in db
 """
-import logging, time, shutil
+import logging
+import time
+import shutil
 from datetime import datetime
 
 import db.sft_meta as meta
@@ -19,13 +21,13 @@ class Cleanex(object):
 
     def __init__(self, age, url_root):
         """ SFT job records that have not been changed 
-            for 'age' [seconds] will be removed. 
+            for 'age' [minutes] will be removed. 
             url_root: filesystem location of URL root.
         """
         self.log = logging.getLogger(__name__)
   
         self.age = age
-        self.log.info("Maximal age of job records set to: %d [sec]" % age)
+        self.log.info("Maximal age of job records set to: %d [minutes]" % age)
         self.url_root = url_root
         self.log.debug("Initialization finished")
    
@@ -35,7 +37,7 @@ class Cleanex(object):
         self.log.debug("Checking for expired SFT job records")
  
         session = meta.Session()
-        fetched_before = datetime.utcfromtimestamp(time.time() - self.age)
+        fetched_before = datetime.utcfromtimestamp(time.time() - (self.age * 60))
         
         fjobs = session.query(schema.SFTJob).filter(schema.SFTJob.db_lastmodified<=fetched_before).all()
 
