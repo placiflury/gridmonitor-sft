@@ -3,13 +3,16 @@ Myproxy and vomsproxy utility clas
 """
 __author__ = "Placi Flury placi.flury@switch.ch"
 __date__ = "11.03.2010"
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 import logging
 import config_parser
-import os, os.path, stat
+import os
+import os.path
+import stat
 from M2Crypto import X509
-import time, calendar
+import time
+import calendar
 import myproxyclient
 import subprocess
 
@@ -23,7 +26,16 @@ class ProxyUtil(object):
         self.min_vomsproxy_valid_hours = int(config_parser.config.get('min_vomsproxy_valid_hours'))
         self.min_myproxy_valid_hours = int(config_parser.config.get('min_myproxy_valid_hours'))
         
-        self.myproxy = myproxyclient.MyProxyClient()
+        _port = int(config_parser.config.get('myproxy_port'))
+        _host = config_parser.config.get('myproxy_server')
+        
+        self.px_type = config_parser.config.get('proxy_type')
+        _px_policy = config_parser.config.get('proxy_policy')
+
+
+        self.myproxy = myproxyclient.MyProxyClient(_host, _port)
+        self.myproxy.set_proxy_type(self.px_type, _px_policy)
+        
     
     def get_proxy_dir(self):
         """ return proxy directory """
@@ -57,7 +69,13 @@ class ProxyUtil(object):
             if remaining_hours > self.min_vomsproxy_valid_hours:
                 return True
         try:
-            cmd ="voms-proxy-init -voms %s -key %s -cert %s -hours 10 -out %s" % (vo_name, ckfile, ckfile, pfile)
+            if self.px_type == 'old':
+                cmd ="voms-proxy-init -voms %s -key %s -cert %s -old -hours 10 -out %s" % \
+                 (vo_name, ckfile, ckfile, pfile)
+            else: # use 'rfc' type
+                cmd ="voms-proxy-init -voms %s -key %s -cert %s -rfc -hours 10 -out %s" % \
+                 (vo_name, ckfile, ckfile, pfile)
+
             ret = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             ret.poll()
             if ret.returncode == 0:
@@ -79,7 +97,7 @@ class ProxyUtil(object):
                 return False
                 
         except Exception, e:
-            self.log.error("Could not get myproxy cert for '%s', got '%s'" % (DN, e))
+            self.log.error("Could not get voms proxy cert for '%s', got '%s'" % (DN, e))
             self.last_error_msg = e.__str__()
             return False
 

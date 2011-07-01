@@ -1,6 +1,0 @@
-&("executable" = "/bin/echo" )
-("arguments" = "hello, grid" )
-("jobname" = "ARC testjob 2" )
-("stdout" = "stdout" )
-("cputime" = "5" )
-

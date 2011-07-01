@@ -2,8 +2,8 @@
 myproxy library. Partially based  on m2crypto testing and demo code.
 """
 __author__ = "Placi Flury grid@switch.ch"
-__date__ = "14.02.2011"
-__version__ = "0.1.0"
+__date__ = "03.06.2011"
+__version__ = "0.2.0"
 
 import os, os.path, time, random, calendar
 from hashlib import sha1
@@ -11,6 +11,7 @@ from M2Crypto import SSL, RSA, X509, EVP, BIO, ASN1, util
 from M2Crypto import version as m2_version
 from distutils import version
 
+DEBUG = False
 
 class MyProxyError(Exception):
     """ 
@@ -20,12 +21,12 @@ class MyProxyError(Exception):
         message -- explanation of error 
     """
     def __init__(self, expression, message):
-        Exception.__init__(self)
         self.expression = expression
         self.message = message
+        Exception.__init__(self)
 
     def __str__(self):
-        return repr (self.message)
+        return self.message
 
 class MyProxyInputError(MyProxyError):
     """ Raised for wrong input parameters (types, values etc.)"""
@@ -45,12 +46,12 @@ class CredentialError(Exception):
         message -- explanation of error 
     """
     def __init__(self, expression, message):
-        Exception.__init__(self)
         self.expression = expression
         self.message = message
+        Exception.__init__(self)
 
     def __str__(self):
-        return repr(self.message)
+        return self.message
     
 class UserCredentialError(CredentialError):
     """ Raised for errors with user credentials. """
@@ -272,31 +273,52 @@ class MyProxy(object):
 
     # http://dev.globus.org/wiki/Security/ProxyCertTypes  -> FOR OIDs
     KEY_USAGE_VALUE = "critical,digitalSignature, keyEncipherment"
-    PCI_RFC3820_TYPE = "critical,language:1.3.6.1.5.5.7.1.14"
-    PCI_GLOBUS_TYPE = "critical,language:1.3.6.1.4.1.3536.1.222"
-    PCI_NORMAL_POLICY = "critical, language:1.3.6.1.5.5.7.21.1"
-    PCI_LIMITED_POLICY = "critical, language:1.3.6.1.4.1.3536.1.1.1.9" 
+    PX_CERTINFO_OID = 'OID:1.3.6.1.5.5.7.1.14'  
+    PX_CERTINFO = 'proxyCertInfo'
+    PCI_NORMAL_POLICY = "critical, language: 1.3.6.1.5.5.7.21.1"
+    PCI_LIMITED_POLICY = "critical, language: 1.3.6.1.4.1.3536.1.1.1.9" 
     
 
-    def __init__(self, host=None, port=7512):
+    VALID_PX_TYPES = ['old','rfc']    # valid proxy types, which are:
+                                                        # old - legacy globus proxy
+                                                        # rfc - RFC3820 compliant proxy
+
+    VALID_PX_POLICIES = ['normal', 'limited'] # valid proxy policies
+
+    def __init__(self, host=None, port=7512, px_type = 'rfc', bits = 1024, px_policy='normal'):
         """
             Keyword arguments:
             host -- MyProxy server hostname  (default None, -> must be set later)
             port -- MyProxy server port  (default 7512)
+            px_type -- Proxy type (limited, old, rfc), default = rfc
+            bits -- key size of generated proxy
+
+            raised -- MyProxyInputError if px_type is not supported or is invalid.
+
         """
         self._host = host
         self._port = port
         self._context = SSL.Context(MyProxy.SSL_PROTOCOL)
         self._px_validity_time = 7 * 86400  # validity of uploaded proxy (default 7 days)
+        self._bits = bits
+        if px_type not in MyProxy.VALID_PX_TYPES:
+            raise MyProxyInputError('Invalid px_type', 
+            "The specified px_type '%s' is not supported." % px_type ) 
+        self._px_type = px_type
+        
+        if px_policy not in MyProxy.VALID_PX_POLICIES:
+            raise MyProxyInputError('Invalid px_policy', 
+            "The specified px_policy '%s' is not supported." % px_policy ) 
+        self._px_policy = px_policy
  
 
-    def _generate_signing_request(self, bits = 1024, messageDigest = "sha1"):
+    def _generate_signing_request(self, messageDigest = "sha1"):
         """
             Generates a certificate request, (re-) sets the proxykey variable
             Returns: key and csr (X509.Request)
         """
         csr = X509.Request()
-        key = RSA.gen_key(bits, 65537)
+        key = RSA.gen_key(self.get_key_size(), 65537)
             
         pkey = EVP.PKey()
         pkey.assign_rsa(key, capture=0)
@@ -360,19 +382,12 @@ class MyProxy(object):
         return int(secs2exp)
 
 
-    def _create_proxy(self, credential, type='old', policy='normal', bits=512):
+    def _create_proxy(self, credential):
         """ 
         Creates a proxy. Different flavors can be specified 
-        by the 'type' variable
+        by the 'px_type' variable
 
         credential -  Credential type object
-
-        type - old : legacy globus proxy (default)
-            - gt3: pre-RFC3820 compliant proxy
-            - rfc: RFC3820 compliant proxy 
-        policy: - limited: limited globus proxy
-                - normal: (default)   
-        bits: size of proxy in bits [512 default]
 
         returns EVP proxykey, proxycert 
         raises: MyProxyInputError upon invalid input
@@ -387,7 +402,7 @@ class MyProxy(object):
         proxycert = X509.X509()
 
         pk2 = EVP.PKey()
-        proxykey =  RSA.gen_key(bits, 65537)
+        proxykey =  RSA.gen_key(self.get_key_size(), 65537)
         pk2.assign_rsa(proxykey)
         proxycert.set_pubkey(pk2)
         proxycert.set_version(2)
@@ -406,30 +421,33 @@ class MyProxy(object):
         issuer_name_string = credential.get_cert().get_subject().as_text()
         seq = issuer_name_string.split(",")
 
-        if type == 'old': # legacy proxy -> no extensions
-            if policy == 'normal':
-                proxy_subject = 'proxy'
-            else:
-                proxy_subject = 'limited proxy'
-        elif type == 'rfc':
-            proxy_subject = random.randint(10000000, 99999999)
-            pci_ext = X509.new_extension("keyUsage", MyProxy.KEY_USAGE_VALUE)
-            proxycert.add_ext(pci_ext)
-            pci_ext = X509.new_extension("proxyCertInfo", \
-                        MyProxy.PCI_RFC3820_TYPE)
-            proxycert.add_ext(pci_ext)
-        elif type == 'gt3': # globus proxy
-            proxy_subject = random.randint(10000000, 99999999)
-            pci_ext = X509.new_extension("keyUsage", MyProxy.KEY_USAGE_VALUE)
-            proxycert.add_ext(pci_ext)
-            pci_ext = X509.new_extension("proxyCertInfo", \
-                        MyProxy.PCI_GLOBUS_TYPE)
-            proxycert.add_ext(pci_ext)
-        else:
-            # unknown type
-            raise MyProxyInputError('Invalid Proxy Type', \
-                    "Type '%s' for proxy is invalid" % type)
+        px_type = self.get_proxy_type()
+        px_policy = self.get_proxy_policy()
 
+        pci_ext = X509.new_extension("keyUsage", MyProxy.KEY_USAGE_VALUE, 1)
+        proxycert.add_ext(pci_ext)
+
+        # legacy proxys have no extensions
+        if px_type == 'old':
+            if px_policy == 'limited':
+                proxy_subject = 'limited proxy'
+            else: 
+                proxy_subject = 'proxy'
+
+        elif px_type == 'rfc':
+            proxy_subject = str(random.randint(10000000, 99999999))
+            if px_policy == 'limited':
+                pci_ext2 = X509.new_extension(MyProxy.PX_CERTINFO,
+                     MyProxy.PCI_LIMITED_POLICY, 1)
+            else:
+                pci_ext2 = X509.new_extension(MyProxy.PX_CERTINFO, 
+                    MyProxy.PCI_NORMAL_POLICY, 1)
+            proxycert.add_ext(pci_ext2)
+        else:
+            # unknown px_type -> 
+            raise MyProxyInputError('Invalid Proxy Type', \
+                    "Type '%s' for proxy is invalid" % px_type)
+            
         subject_name = X509.X509_Name()
 
         for entry in seq:
@@ -446,7 +464,7 @@ class MyProxy(object):
         pk = EVP.PKey()
         pk.assign_rsa(credential.get_key(), capture=0)
         proxycert.sign(pk, 'sha1')
-        
+
         return pk2, proxycert
  
     
@@ -466,7 +484,7 @@ class MyProxy(object):
 
         c = der_blob[ind:ind+_len+4] # get CSR 
         
-        if version.LooseVersion(m2_version) < '0.20': # XXX clean up
+        if version.LooseVersion(m2_version) < '0.20': 
             # little hack to overcome missing method in versions < 0.20
             import tempfile
             tmp_fd, tmp_name = tempfile.mkstemp(suffix='.csr')
@@ -561,6 +579,35 @@ class MyProxy(object):
         ppx.set_issuer_name(px.get_subject())
         issuer_name_string = px.get_subject().as_text()
         seq = issuer_name_string.split(",")
+        
+        px_type = self.get_proxy_type()
+        px_policy = self.get_proxy_policy()
+
+        pci_ext = X509.new_extension("keyUsage", MyProxy.KEY_USAGE_VALUE, 1)
+        ppx.add_ext(pci_ext)
+
+        # legacy proxys have no extensions
+        if px_type == 'old':
+            if px_policy == 'limited':
+                proxy_subject = 'limited proxy'
+            else: 
+                proxy_subject = 'proxy'
+
+        elif px_type == 'rfc':
+            proxy_subject = str(random.randint(10000000, 99999999))
+            if px_policy == 'limited':
+                pci_ext2 = X509.new_extension(MyProxy.PX_CERTINFO, 
+                    MyProxy.PCI_LIMITED_POLICY, 1)
+            else:
+                pci_ext2 = X509.new_extension(MyProxy.PX_CERTINFO, 
+                    MyProxy.PCI_NORMAL_POLICY, 1)
+            ppx.add_ext(pci_ext2)
+            
+        else:
+            # unknown px_type -> 
+            raise MyProxyInputError('Invalid Proxy Type', \
+                    "Type '%s' for proxy is invalid" % px_type)
+
 
         subject_name = X509.X509_Name()
         for entry in seq:
@@ -570,7 +617,7 @@ class MyProxy(object):
                                           entry=l[1], len=-1, loc=-1, set=0)
 
         subject_name.add_entry_by_txt(field="CN", type=ASN1.MBSTRING_ASC,
-                                      entry="proxy", len=-1, loc=-1, set=0)
+                                      entry=proxy_subject, len=-1, loc=-1, set=0)
         ppx.set_subject(subject_name)
         ppx.sign(px_key,'sha1')
         return px, ppx
@@ -609,6 +656,53 @@ class MyProxy(object):
         """
         return self._px_validity_time
 
+    def set_key_size(self, bits):
+        """ Sets siz of key in bits."""
+        self._bits = bits
+
+    def get_key_size(self):
+        """ Returns key size in bits. """
+        return self._bits
+
+    def set_proxy_type(self, px_type):
+        """ Sets type of proxy to generate. 
+            valid values are:
+                old - legacy globus proxy
+                rfc - RFC3820 compliant proxy
+ 
+            raises MyProxyInputError if specified type
+            is not supported/valid.
+        """
+        if px_type not in MyProxy.VALID_PX_TYPES:
+            raise MyProxyInputError('Invalid px_type', 
+            "The specified px_type '%s' is not supported." % px_type ) 
+        self._px_type = px_type
+
+    def get_proxy_type(self):
+        """ returns the type of the proxy 
+            generated for uploading.
+        """
+        return self._px_type
+    
+    def set_proxy_policy(self, px_policy):
+        """ Sets policy of proxy to generate. 
+            valid values are:
+                limited -- limited proxy
+                normal  -- old style normal proxy
+ 
+            raises MyProxyInputError if specified type
+            is not supported/valid.
+        """
+        if px_policy not in MyProxy.VALID_PX_POLICIES:
+            raise MyProxyInputError('Invalid policy_type', 
+            "The specified px_policy '%s' is not supported." % px_policy ) 
+        self._px_policy = px_policy
+
+    def get_proxy_policy(self):
+        """ returns the policy of the proxy 
+            generated for uploading.
+        """
+        return self._px_policy
 
     def init_context(self, certfile=None, keyfile=None, passphrase=None):
         """ Initializes SSL Context for communication with MyProxy server.
@@ -668,7 +762,6 @@ class MyProxy(object):
                 MyProxy.GET_PROXY, username, passphrase, lifetime)
 
         conn = SSL.Connection(self._context)
-        
         try:
             conn.connect((self._host, self._port))
             conn.write('0') # sending globus compat byte
@@ -678,7 +771,6 @@ class MyProxy(object):
             raise MyProxyError("Connection Error", '%r' % e)
         
         self._check_server_status(conn)
-        
        
         key, csr = self._generate_signing_request()
         try:
@@ -757,9 +849,23 @@ class MyProxy(object):
         n_certs = '%c' % (len(chain) + 3) # 'convert to 1 byte unsigned
         crt_str = n_certs + crt.as_der() + px.as_der() \
                  + credential.get_cert().as_der()
-        
+       
+ 
         for c in chain:
             crt_str += c.as_der()
+        
+        if DEBUG:
+            _proxyfile = 'upload_px_%s_%s.pem' % \
+                 (self.get_proxy_type(), self.get_proxy_policy())
+            _pxf = open(_proxyfile, "w")
+            bio = BIO.File(_pxf)
+            bio.write(crt.as_pem())
+            bio.write(px.as_pem())
+            bio.write(credential.get_cert().as_pem())
+            for c in chain:
+                bio.write(c.as_pem())
+            bio.close()
+            os.chmod(_proxyfile, 0600)
 
         try:
             conn.send(crt_str)

@@ -1,58 +1,34 @@
 #!/usr/bin/env python 
 
-""" My proxy client. Demo on how to use myproxylib.py """
+""" Myproxy client. Demo on how to use myproxylib.py """
 
-import logging
 import os
-import os.path
+import sys
 
-from myproxylib import MyProxy
-
-import config_parser
+from myproxylib import MyProxy, UserCredential
 
 __version__ = '0.1'
 
 class MyProxyClient(object):
 
-    def __init__(self, debug = False):
+    def __init__(self, host, port=7512, certfile=None, keyfile=None, debug=False):
         """ 
-        Creates a myproxy client object
+            host -- hostname of MyProxy server
+            port -- port on which sever listens
+            certfile - file (path) wherefrom to read (user) certificate. 
+                       If not set, it will be defaulted to $HOME/.globus/usercert.pem
+            keyfile - file (path) wherefrom to read (user) key. If not set
+                        it will be defaulted to $HOME/.globus/userkey.pem   
+
+            Notice, certfile and keyfile must be PEM encoded 
         """
-        self.log = logging.getLogger(__name__)
-        
         self.debug = debug
-        self._keyfile = None # used by SSL Context
-        self._certfile = None
-
-        self._certfile = config_parser.config.get('hostcert_file')
-        self._keyfile = config_parser.config.get('hostkey_file')
-        host = config_parser.config.get('myproxy_server')
-        _port = config_parser.config.get('myproxy_port')
-       
-        if not _port:
-            port = 7512
-        else:
-            port = int(_port)
-
-        lifetime = config_parser.config.get('myproxy_lifetime')
-        if not lifetime:
-            self.lifetime = 43200
-        else:
-            self.lifetime = int(lifetime)
-            
-        if not os.path.exists(self._certfile):
-            self.log.error("Certificate file '%s' does not exist." % self._certfile)
-        if not os.path.exists(self._keyfile):
-            self.log.error("Keyfile '%s' does not exist." % self._keyfile)
-        
-        st = os.stat(self._keyfile)
-        user_id = os.geteuid()
-        if st.st_uid != user_id: # no handling of that case, may break later ...
-            self.log.error("Keyfile '%s' not owned by user runnig process ('%d')" % (self._keyfile, user_id))
+        self._usercert = None
+        self._userkey = None
+        self._keyfile = keyfile # used by SSL Context
+        self._certfile = certfile
 
         self._my_proxy = MyProxy(host, port)
-        self.log.debug("MyProxy: %s:%s with creds: %s %s." % (host, port, self._certfile, self._keyfile))
-        
 
     def set_certfile(self, certfile):
         """ setting certfile for communication with MyProxy server"""
@@ -62,7 +38,17 @@ class MyProxyClient(object):
         """ setting keyfile for communication with MyProxy server"""
         self._keyfile = keyfile
         
-    def myproxy_logon(self, username, passphrase, outfile=None):
+    def set_key_size(self, bits):
+        """ Sets key size of generated proxy """
+        self._my_proxy.set_key_size(bits)
+        print "key size", self._my_proxy.get_key_size()
+
+    def set_proxy_type(self, px_type, px_policy):
+        """ Sest type of proxy to upload """
+        self._my_proxy.set_proxy_type(px_type)
+        self._my_proxy.set_proxy_policy(px_policy)
+    
+    def myproxy_logon(self, username, passphrase, outfile):
         """
         Function to retrieve a proxy credential from a MyProxy server
         
@@ -70,35 +56,75 @@ class MyProxyClient(object):
         """
 
         self._my_proxy.init_context(self._certfile, self._keyfile)
-        proxy_credential= self._my_proxy.get(username, passphrase)
 
-        if not outfile:
-            outfile = '/tmp/x509up_u%s' % (os.getuid())
+        proxy_credential = self._my_proxy.get(username, passphrase)
 
-        print 'Storing proxy in:', outfile
+        if self.debug:
+            print 'Storing proxy in:', outfile
 
         proxy_credential.store_proxy(outfile)
         
+
+    def myproxy_init(self, username, myproxy_passphrase, 
+            keyfile, certfile, lifetime = None):
+        """ downsized myproxy_init 
+            username -- name used on MyProxy server for storing credential
+            myproxy_passphrase -- passphrase for credentials on MyProxy server
+            keyfile -- user local key file
+            certfile -- user local certificate file
+            lifetime -- sets max lifetime allowed for retrieved proxy credentials (in secs).
+                        If lifetime not set, we'll set it to a libraries default value
+        """
+         
+        key_passphrase = getpass.getpass(prompt = "Grid passphrase:")
+        user_credential = UserCredential(keyfile, certfile, key_passphrase)
+        self._my_proxy.init_context(self._certfile, self._keyfile, key_passphrase)
+        proxy_credential = self._my_proxy.put(user_credential, username, myproxy_passphrase, lifetime)
+
 
 
 if __name__ == '__main__':
     import optparse
     import getpass
 
-    config_file = "/opt/smscg/sft/etc/config.ini"
-     
-    config_parser.config =  config_parser.ConfigReader(config_file)
-
-
     MIN_PASS_PHRASE = 7 # minimal length of myproxy passphrase
-    outfile = None
-    usage= "usage: %prog [options] get \n\nDo %prog -h for more help."
 
-    parser = optparse.OptionParser(usage=usage, version ="%prog " + __version__)
-    parser.add_option("-l", "--username", dest="username", 
-                       help="The username with which the credential is stored on the MyProxy server")
-    parser.add_option("-o", "--out", dest="outfile", 
-                       help="Filenname under which user proxy certificate gets stored.")
+    if os.environ.has_key('MYPROXY_SERVER'):
+        MYPROXY_SERVER = os.environ['MYPROXY_SERVER']
+    else:
+        MYPROXY_SERVER = 'apollo.switch.ch' 
+
+    usage = "usage: %prog [options] get|put \n\nDo %prog -h for more help."
+
+    parser = optparse.OptionParser(usage = usage, version = "%prog " + __version__)
+    parser.add_option("-l", "--username", dest = "username", default = os.environ['USER'],
+                    help="The username with which the credential is stored on the MyProxy server")
+    parser.add_option("-d", "--debug", action = 'store_true', default = False,
+                    help = "Enhance verbosity for debugging purposes")
+
+    parser.add_option("", "--limited",  action = 'store_true',  
+                    default = False,
+                    help = "Creates a limited globus proxy (policy). (default=%default).")
+    parser.add_option("", "--old",  action = 'store_const', const = 'old', dest = 'px_type',
+                    help = "Creates a legacy globus proxy.")
+    parser.add_option("", "--rfc",  action = 'store_const',  const = 'rfc', dest = 'px_type', 
+                    default = 'rfc',
+                    help = "Creates a RFC3820 compliant proxy (default)." )
+
+    parser.add_option("", "--bits", dest = "bits", default = 1024, type ='int',
+                    help="Number of bits in key (512, 1024, 2048, default=%default) " + \
+                "of signing proxy. All other key sizes defined by myproxy server. ")
+    parser.add_option("", "--cert", dest = "certfile",
+                    default = '%s/.globus/usercert.pem' % (os.environ['HOME']), 
+                    help = "Location of user certificate(default = %default).")
+    parser.add_option("", "--key", dest = "keyfile",
+                    default = '%s/.globus/userkey.pem' % (os.environ['HOME']), 
+                    help = "Location of user certificate(default = %default).")
+
+    parser.add_option("", "--out", dest = "outfile",
+                    default = '/tmp/x509up_u%s' % (os.getuid()), 
+                    help = "Filenname under which user proxy certificate gets stored (default = %default).")
+
     (options, args) = parser.parse_args()
 
     if not args:
@@ -108,20 +134,36 @@ if __name__ == '__main__':
         parser.error("wrong argument")
     
     username = options.username
-    while True:
-        passphrase = getpass.getpass(prompt="MyProxy passphrase:")
-        if len(passphrase) < MIN_PASS_PHRASE:
-            print 'Error Passphrase must contain at least %d characters' % MIN_PASS_PHRASE
-            continue
-        break
+
+    if options.debug:
+        print 'Invoked with following parameters:'
+        print 'options:', options
+        print 'arguments:', args
+
+
         
     try:
-        mp = MyProxyClient(debug=True)
+        mp = MyProxyClient(host = MYPROXY_SERVER, debug = options.debug)
         if args[0] == 'get':
-            mp.myproxy_logon(username, passphrase, outfile)
-            if outfile:
-                print "A proxy has been received for user %s in %s." % (username, outfile)
+            passphrase = getpass.getpass(prompt="MyProxy passphrase:")
+            mp.myproxy_logon(username, passphrase, options.outfile)
+            if options.outfile:
+                print "A proxy has been received for user %s in %s." % (username, options.outfile)
             else:
-                 print "A proxy has been received for user %s" % (username)
-    except Exception,e:
+                print "A proxy has been received for user %s" % (username)
+        elif args[0] == 'put':
+            passphrase = getpass.getpass(prompt="MyProxy passphrase:")
+            if len(passphrase) < MIN_PASS_PHRASE:
+                print 'Error Passphrase must contain at least %d characters' % MIN_PASS_PHRASE
+                sys.exit(-1)
+            mp.set_certfile(options.certfile)
+            mp.set_keyfile(options.keyfile)
+            mp.set_key_size(options.bits)
+            policy = 'normal'
+            if options.limited:
+                policy = 'limited'
+            mp.set_proxy_type(options.px_type, policy)
+            mp.myproxy_init(username, passphrase, options.keyfile, options.certfile)
+            print 'Credential for delegation was succesfully up-loaded'
+    except Exception, e:
         print "Error:", e
