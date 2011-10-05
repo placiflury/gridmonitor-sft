@@ -166,7 +166,7 @@ class SFTDaemon(Daemon):
                 hosts.append(_host)
 
 
-        self.log.debug("Hosts currently scheduled down: %r" % hosts)
+        self.log.info("Hosts currently scheduled down: %r" % hosts)
         return hosts
 
 

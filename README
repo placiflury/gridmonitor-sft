@@ -1,13 +1,5 @@
 SFT installation notes:
 ------------
 -> edit config.ini in /opt/smscg/sft/etc
--> for first installation, you need to create db. run script in /opt/smscg/sft/etc/db_setup.py manually (???)
 -> add and populate  /etc/vomses on host
 -> add it to init.d (either update-rc.d, or chkconf)
-
-
-Todos:
------
-
--> don't test host/sites with scheduled downtimes
--> periodically re-read sft configuration

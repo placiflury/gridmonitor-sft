@@ -100,12 +100,13 @@ class SFT_Event(object):
             clg = self.session.query(schema.ClusterGroup).filter_by(name=sft.cluster_group).first()
             if not clg:
                 self.log.warn("SFT test '%s' has no clusters specified." % self.sft_name)
-            else:
+            else:   
                 _clusters = clg.clusters
                 clusters = list()
                 for cl in _clusters:
-                    if cl not in self.clusters_down:
+                    if cl.hostname not in self.clusters_down:
                         clusters.append(cl)
+                        
 
 
             tsts = self.session.query(schema.TestSuit).filter_by(name=sft.test_suit).first()
@@ -172,10 +173,8 @@ class SFT_Event(object):
     def check_exec(self, t):
         """ checks whether it's time to execute sft event. """
         if self.matchtime(t):
-            self.log.info("XXX yes time maches")
             vos, clusters, tests = self.get_sft_details()
 
-            self.log.info("XXX got details")
             for vo in vos:
                 if not vo.users:  # not an error
                     continue
