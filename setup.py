@@ -4,7 +4,7 @@ from distutils.core import setup
 
 setup(
     name = "smscg_sft",
-    version = "0.4.1",
+    version = "0.5.0",
     description = "Site Functional Tests (SFT) module for the SMSCG GridMonitor.",
     long_description = """
 	This module provides a daemon that runs Site Functional Tests. The SFTs are
@@ -20,7 +20,7 @@ setup(
     author_email = "grid@switch.ch",
     url = "http://www.smscg.ch",
     download_url = "https://subversion.switch.ch/svn/smscg/smscg/",
-    packages = ['sft','sft/db', 'sft/utils'],
+    packages = ['sft','sft/db', 'sft/errors','sft/utils'],
     scripts = ['sft_daemon.py'],
     data_files=[('.',['config/config.ini','config/logging.conf'])]
 )

@@ -1,5 +1,31 @@
 SFT installation notes:
-------------
+------------------------
+
 -> edit config.ini in /opt/smscg/sft/etc
 -> add and populate  /etc/vomses on host
 -> add it to init.d (either update-rc.d, or chkconf)
+
+Writing your own site functional test
+-------------------------------------
+
+SFTs are created/added via the GridMonitor interface: 
+https://<YOUR_MONITOR_HOST>/monadmin/sft
+
+Your XRSL of the SFTs can denote logical errors in the execution
+of the test by two ways:
+
+Option 1.) is to specify 'test.error' file for your job/test, which shall
+be named 'error.log'.
+
+...
+(stderr='error.log')
+...
+
+Option 2.) is to have gmlog poinitng to '.arc'  or 'log' e.g.
+
+...
+(gmlog='.arc')
+...
+
+Please stick to the conventions as it's the only way for the SFT script
+to intercept logical errors.

@@ -17,8 +17,8 @@ from sqlalchemy.orm import mapper, relationship
 from datetime import datetime
  
 import sft_meta 
-from sft.utils import config_parser, rsa
-
+from sft.utils import rsa
+import  sft.sft_globals as g
 
 t_cluster = sa.Table("cluster", sft_meta.metadata,
         sa.Column("hostname", sa.types.VARCHAR(128, convert_unicode=True), primary_key=True),
@@ -122,10 +122,10 @@ class User(object):
         """ if a 'new_private_key' is given, we will cipher
         the pwd with this one. Used when cert is expiring.
         """
-        privkey = config_parser.config.get('private_key') 
-        pubkey =  config_parser.config.get('public_key')
-        new_privkey = config_parser.config.get('new_private_key')
-        new_pubkey =  config_parser.config.get('new_public_key')
+        privkey = g.config.private_key
+        pubkey =  g.config.public_key
+        new_privkey = g.config.new_private_key
+        new_pubkey =  g.config.new_public_key
        
         if new_privkey:
             privkey = new_privkey
@@ -138,8 +138,8 @@ class User(object):
             self.passwd = rc.priv_public_encrypt(pwd)
         
     def get_passwd(self):
-        privkey = config_parser.config.get('private_key') 
-        new_privkey = config_parser.config.get('new_private_key')
+        privkey = g.config.private_key
+        new_privkey = g.config.new_private_key
         if new_privkey:
             try:
                 rc = rsa.RSACipher(privkey)

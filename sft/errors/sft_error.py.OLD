@@ -1,0 +1,105 @@
+"""
+Container for SFT related errors.
+"""
+
+import logging
+import time
+
+log = logging.getLogger(__name__)
+
+class Error(object):
+
+    """ Generic Error object. Should 
+        not be used directly.
+    """
+    
+    def __init__(self, error_id):
+        self.error_id = error_id
+        self.error_type = None 
+        self.error_msg = None
+        self.notify = False
+        self.last_modified = time.time()
+
+    def set_type(self, etype):
+        """
+        Setting of error type. 
+        """
+        self.error_type = etype
+        self.last_modified = time.time()
+
+    def set_msg(self, emsg):
+        """
+        Setting of error message.
+        """
+        self.error_msg = emsg
+        self.last_modified = time.time()
+    
+    def get_last_modified(self):
+        """
+        returns epoch time when object
+        hast last been modified.
+        """
+        return self.last_modified
+
+    def set_notify(self):
+        """
+        sets notification flag.
+        """
+        self.notify = True
+
+    def check_notify(self):
+        """
+        check whether notification 
+        should be carried out.
+        """
+        return self.notify 
+
+    def reset(self):
+        """
+            purges any info about any existing error.
+        """
+        self.error_type = None 
+        self.error_msg = None
+        self.notify = False
+        self.last_modified = time.time()
+        
+         
+class  SFT_Error(Error):
+    
+    # list of valid error types
+    VALID_ERROR_TYPES = ['INVALID_EXEC_TIME', 
+                        'INVALID_TEST_PARAMS',
+                        'CONFIG_ERROR',
+                        'MYPROXY',
+                        'VOMSPROXY',
+                        'UNKNOWN']
+
+    def __init__(self, sft_name):
+        """ pass sft_name as identifier. """
+
+        Error.__init__(self, sft_name)
+
+    def set_type(self, etype):
+        """
+        Setting error type. Type must
+        be of SFT_Error.VALID_ERROR_TYPES. 
+        If not the type will be defaulted
+        to 'UNKNOWN'.
+        """
+
+        if etype not in SFT_Error.VALID_ERROR_TYPES:
+            log.warn("Error type '%s' not valid, resetting it to 'UNKNOWN'" % etype)
+            self.error_type = 'UNKNOWN'
+        else:
+            self.error_type = etype
+
+        self.last_modified = time.time()
+
+    def get_valid_types(self):
+        """ returns valid error types """
+        return SFT_Error.VALID_ERROR_TYPES[:]
+    
+    
+
+        
+

@@ -112,7 +112,7 @@ class HTMLIndexer(object):
 
     def make_html_index(self, index_list):
         """
-        generate html-index and store in 'index.html' file. Noitce, if there should be
+        generate html-index and store in 'index.html' file. Notice, if there should be
         an 'index.html' file, it will be renamed by 'get_index()' to 'index.html.html'  
         """
         index_file_name = os.path.join(self.path,'index.html')       

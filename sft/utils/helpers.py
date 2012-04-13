@@ -1,53 +1,94 @@
 #!/usr/bin/env python
 """ Helper functions and decorators """
 
-def strip_args(func):
-    """ Decorator that strips the input parameters 
-        of a function. If arg is a string
-        it gets explicitly passed to the function 
-        as 'unicode'.
+from  sft.errors.cron import CronError, CronRangeError, CronSyntaxError
+
+import sft.db.sft_meta as meta
+import sft.db.sft_schema as schema
+
+
+def get_sft_test_details(sft_name):
+    """ returns the  SFT test description 
+        object of SFT with given name (or None)
     """
-    def new_func(*args, **kwargs):
-        args_stripped = list()
-        kwargs_stripped = dict()
+    return meta.Session.query(schema.SFTTest).\
+        filter_by(name=sft_name).first()
 
-        for arg in args:
-            if type(arg) == str:
-                args_stripped.append(unicode(arg.strip()))
-            else:
-                args_stripped.append(arg)
+def get_sft_tests_details():
+    """ returns a list with all SFT test desription
+        objects if no name was passed (or empty list)
+    """
+    return meta.Session.query(schema.SFTTest)
 
-        if kwargs:
-            for k, v in kwargs.items():
-                if type(v) == str:
-                    kwargs_stripped[k] = unicode(v.strip())
-                else:
-                    kwargs_stripped[k] = v
+def get_all_sft_names():
+    """ returns list with names of all existing SFTs. """
+    sft_names = []
+    for sft in  get_sft_tests_details():
+        sft_names.append(sft.name)
+    return sft_names
 
-        return func(*args_stripped, **kwargs_stripped)
+def get_all_jobs():
+    """ returns all SFT jobs in db. """
+    return meta.Session.query(schema.SFTJob)
+
+def get_all_sft_jobs(sft_name, cluster_name = None):
+    """ returns all jobs with of SFT with name  sft_name. If cluster_name is 
+        passed only return jobs for given clusters """
+
+    if cluster_name:
+        return meta.Session.query(schema.SFTJob).\
+            filter(and_(schema.SFTJob.sft_test_name == sft_name,
+            schema.SFTJob.cluster_name == cluster_name)).order_by(desc(schema.SFTJob.submissiontime))
+    else:
+         return meta.Session.query(schema.SFTJob).\
+            filter_by(sft_test_name = sft_name).order_by(desc(schema.SFTJob.submissiontime))
+
+def get_job(name):
+    """ returns SFT job with given name in db. """
+    return meta.Session.query(schema.SFTTest).\
+            filter_by(name = name).first()
+
+def get_sft_vo_group(vo_group_name):
+    """ returns SFT VO group object"""
+    return  meta.Session.query(schema.VOGroup).\
+                filter_by(name=vo_group_name).first()
+
+def get_sft_cluster_group(cluster_group_name):
+    """ returns SFT cluster group object"""
+    return meta.Session.query(schema.ClusterGroup).\
+                filter_by(name=cluster_group_name).first()
+
+def get_sft_suit(suit_name):
+    """ returns SFT suit group object """
+    return meta.Session.query(schema.TestSuit).\
+                filter_by(name=suit_name).first()
+
+def get_sft_user(DN):
+    """ returns SFT user object for given DN. """
+    return meta.Session.query(schema.User).filter_by(DN = DN).first()
+
+
+def get_vo_group_details(group_name):
+    """ returns list of VOs objects 
+        that are membes of 'group_name'. 
+    """
+    return meta.Session.query(schema.VOGroup).\
+                filter_by(name=group_name).first()
+
+def get_cluster_group_details(group_name):
+    """ returns list of cluster objects 
+        that are membes of 'group_name'. 
+    """
+    return meta.Session.query(schema.ClusterGroup).\
+                filter_by(name=group_name).first()
+
+def get_test_suit_details(suit_name):
+    """ returns list of test suit objects 
+        that are membes of 'suit_name'. 
+    """
+    return meta.Session.query(schema.TestSuit).\
+                filter_by(name=suit_name).first()
     
-    return new_func
-
-class CronError(Exception):
-    """ 
-    Exception raised for Cron errors.
-    Attributes:
-        expression -- input expression in which error occurred
-        message -- explanation of error 
-    """
-    def __init__(self, expression, message):
-        self.expression = expression
-        self.msg = message
-
-class CronRangeError(CronError):
-    """ Raised if the specified time is 
-        exceeding a max range.
-    """
-    pass
-
-class CronSyntaxError(CronError):
-    """ Raised for syntax errors in cron string """
-    pass
  
 def parse_cron_entry(cron_str, max):
     """
@@ -143,6 +184,35 @@ def parse_cron_entry(cron_str, max):
             "The cron entry '%s' seems not be a valid crontab style entry!" % (cron_str))
 
 
+
+def strip_args(func):
+    """ Decorator that strips the input parameters 
+        of a function. If arg is a string
+        it gets explicitly passed to the function 
+        as 'unicode'.
+    """
+    def new_func(*args, **kwargs):
+        args_stripped = list()
+        kwargs_stripped = dict()
+
+        for arg in args:
+            if type(arg) == str:
+                args_stripped.append(unicode(arg.strip()))
+            else:
+                args_stripped.append(arg)
+
+        if kwargs:
+            for k, v in kwargs.items():
+                if type(v) == str:
+                    kwargs_stripped[k] = unicode(v.strip())
+                else:
+                    kwargs_stripped[k] = v
+
+        return func(*args_stripped, **kwargs_stripped)
+    
+    return new_func
+
+
 if __name__ == '__main__':
     
     # some quick helpers testing
@@ -178,5 +248,5 @@ if __name__ == '__main__':
         print 'testing: 1-5,*/12 max: 59'
         print parse_cron_entry('1-5,*/12', 2)
     except Exception, e3:
-        print 'Error: ',e3.msg
+        print 'Error: ', e3.msg
 
