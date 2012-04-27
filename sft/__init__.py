@@ -12,18 +12,14 @@ def init_configuration(config_file):
     sft_globals.config = configuration.Config(config_file)
 
 
-def init_nagios_notifier(server, 
-            send_nsca_cfg = '/etc/send_nsca.cfg', 
-            send_nsca_bin = '/usr/sbin/send_nsca'):
+def init_nagios_notifier(config):
 
     """ Call to initialize global notifier variable in 
         nagios_notifier. 
-
-        server - FQDN of nagios server e.g. nagios.smscg.ch 
-        send_nsca_cfg - path to configuration of NSCA client 
-        send_nsca_bin - path to NSCA client binary
+        
+        config -- configuration object (as created by init_configuration)
     """
-    sft_globals.notifier = nagios_notifier.NagiosNotifier(server, send_nsca_cfg, send_nsca_bin)
+    sft_globals.notifier = nagios_notifier.NagiosNotifier(config)
 
 
 def init_proxy_util(config):

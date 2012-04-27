@@ -267,6 +267,7 @@ class SFT_Event(object):
 
                         cmd = "%s -c %s -e '%s'" % \
                             (self.arcsub, cluster.hostname, test.xrsl.replace('\n',' '))
+                        self.log.debug('cmd:>%s<' % cmd)
                         ret = subprocess.Popen(cmd, shell=True, 
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                         ret.wait()
@@ -276,7 +277,7 @@ class SFT_Event(object):
                             # additional check -> if cluster does not exists, we still get returncode =0
                             output = ret.communicate()
                             if 'Job submission failed due to' in output[0]:    
-                                self.log.error("Job submission failed (retcode is 0)")
+                                self.log.error("(%s) - job submission failed (retcode is 0)" % test.name)
                                 sft_job.status = 'failed'
                                 sft_job.error_msg = output[0]
                                 session.add(sft_job)
@@ -292,24 +293,30 @@ class SFT_Event(object):
                             else: 
                                 jobid = output[0].split('jobid:')[1].strip()
                                 sft_job.jobid = jobid
-                                self.log.debug("Job sumbitted: ID %s" % (jobid))
+                                self.log.debug("(%s)- job sumbitted: ID %s" % (test.name, jobid))
                                 sft_job.status = 'submitted'
                                 session.add(sft_job)
                                 session.flush()
                                 _commit_flg = True
+                            
+                                _notification = NagiosNotification(cluster.hostname, self.sft_name )
+                                _msg = '(%s) - successfully submitted' % (test.name)
+                                _notification.set_message(_msg)
+                                _notification.set_status('OK')
+                                g.notifier.add_notification(_notification)
                                 continue
                         else:
                             _error_msg = ret.communicate()[0]
-                            self.log.error("Job submission failed, with: %s" % _error_msg)
+                            self.log.error("(%s) Job submission failed, with: %s" % (test.name, _error_msg))
                             sft_job.error_type = "arcsub"
-                            sft_job.error_msg = _error_msg
+                            sft_job.error_msg =  _error_msg
                             sft_job.status = 'failed'
                             session.add(sft_job)
                             session.flush()
                             _commit_flg = True
                             
                             _notification = NagiosNotification(cluster.hostname, self.sft_name )
-                            _msg = _error_msg  # XXX maybe add VO + DN + test to get more details
+                            _msg = '(%s) - %s' % (test.name, _error_msg)
                             _notification.set_message(_msg)
                             _notification.set_status('CRITICAL')
                             g.notifier.add_notification(_notification)

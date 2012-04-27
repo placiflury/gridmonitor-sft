@@ -5,6 +5,8 @@ around the SFT tests.
 import logging
 from datetime import datetime
 from housekeeper import Housekeeper
+from publisher import Publisher
+
 import sft_globals as g
 
 class Scheduler(object):
@@ -13,6 +15,7 @@ class Scheduler(object):
         self.log = logging.getLogger(__name__)        
         
         self.housekeeper = Housekeeper()
+        self.publisher = Publisher()
         self.log.info("Initialization finished")
     
     
@@ -25,10 +28,9 @@ class Scheduler(object):
         _down_clusters = self.housekeeper.scheduled_down_clusters
 
         # fetch results of previous SFTs and publish them
-        # XXX todo self.publisher.main()
+        self.publisher.main()
 
         # run eligible SFTs
-        self.log.info("XXX %r" % self.housekeeper.sfts)
         for sft in self.housekeeper.sfts:
             self.log.debug("Checking SFT  '%s' for execution" % sft.get_name())
             sft.set_clusters_down(_down_clusters)

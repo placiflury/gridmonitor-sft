@@ -18,8 +18,7 @@ class Config(object):
     FILE_OPTIONS = {'hostcert_file': '/etc/grid-security/hostcert.pem',
             'hostkey_file': '/etc/grid-security/hostkey_root.pem',
             'private_key' : '/etc/grid-security/hostkey.pem',
-            'send_nsca_bin': '/usr/sbin/send_nsca',
-            'send_nsca_cfg': '/etc/send_nsca.cfg'}
+            'curl_bin': '/usr/bin/curl'}
 
     PATH_OPTIONS = {'url_root': '/opt/smscg/monitor/sft',
             'jobsdir': '/opt/smscg/monitor/sft/jobs',
@@ -41,7 +40,11 @@ class Config(object):
             'min_vomsproxy_valid_hours': 2,
             'proxy_type': 'old',
             'proxy_policy': 'normal',
-            'nagios_server': 'nagios.smscg.ch',
+            'nscaweb_host': 'nagios.smscg.ch',
+            'nscaweb_port': 5667, 
+            'nscaweb_queue': None, 
+            'nscaweb_user': None,
+            'nscaweb_pwd' : None,
             'public_key' : None,
             'new_private_key' : None,
             'new_public_key' : None,
@@ -56,9 +59,34 @@ class Config(object):
         return self.__get_option('localhost')
     
     @property
-    def nagios_server(self):
-        """ FQDN of nagios server"""
-        return self.__get_option('nagios_server')
+    def nscaweb_host(self):
+        """ FQDN of nscaweb host, usually same as where nagios server runs"""
+        return self.__get_option('nscaweb_host')
+
+    @property     
+    def nscaweb_port(self):
+        """ Returns port on which nscaweb daemon (runs on nscaweb_host)
+             is listening.
+        """
+        return self.__get_option('nscaweb_port')
+    
+    @property
+    def nscaweb_queue(self):
+        """ Returns nscaweb queue. """
+        return self.__get_option('nscaweb_queue')
+
+    @property
+    def nscaweb_user(self):
+        """ Returns username of user that is allowed
+            to insert in nscaweb_queueue """
+        return self.__get_option('nscaweb_user')
+    
+    @property
+    def nscaweb_pwd(self):
+        """ Returns password in cleartext of 
+            nscaweb_user. """ 
+        return self.__get_option('nscaweb_pwd')
+
 
     @property
     def myproxy_server(self):
@@ -160,7 +188,9 @@ class Config(object):
             raises ConfigErro if option set and is pointing to 
             an non-existing file.
         """
-        _file =  self.__get_option('new_private_key')
+        option = 'new_private_key'
+        _file =  self.__get_option(option)
+
         if _file and not os.path.exists(_file) and not os.path.isfile(_file):
             self.log.error("Paramenter '%s' points to non-existing file '%s')" % \
             (option, _file))
@@ -175,7 +205,9 @@ class Config(object):
             raises ConfigErro if option set and is pointing to 
             an non-existing file.
         """
-        _file =  self.__get_option('public_key')
+        option = 'public_key'
+        _file =  self.__get_option(option)
+
         if _file and not os.path.exists(_file) and not os.path.isfile(_file):
             self.log.error("Paramenter '%s' points to non-existing file '%s')" % \
             (option, _file))
@@ -190,7 +222,10 @@ class Config(object):
             raises ConfigErro if option set and is pointing to 
             an non-existing file.
         """
-        _file =  self.__get_option('new_public_key')
+
+        option = 'new_public_key'
+        _file =  self.__get_option(option)
+
         if _file and not os.path.exists(_file) and not os.path.isfile(_file):
             self.log.error("Paramenter '%s' points to non-existing file '%s')" % \
             (option, _file))
@@ -200,14 +235,9 @@ class Config(object):
             return None
     
     @property
-    def nsca_bin (self):
-        """ send_nsca_binary file """
-        return self.__get_option('send_nsca_bin')
-
-    @property
-    def nsca_cfg(self):
-        """ configuration file of send_nsca command """
-        return self.__get_option('send_nsca_cfg')
+    def curl_bin (self):
+        """ curl binary file """
+        return self.__get_option('curl_bin')
 
     @property
     def url_root(self):

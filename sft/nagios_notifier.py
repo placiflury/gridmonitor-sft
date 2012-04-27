@@ -1,17 +1,19 @@
 """
-Nagios notification module. Uses the Nagios nsca protocol to 
-push SFT notifications to a nagios server. The messages are
-received there as passive tests.
+Nagios notification module. Uses the curl  protocol to 
+push SFT notifications to a nagios server. On the
+nagios server site we recommend to install 
+the NSCAweb (http://wiki.smetj.net/wiki/Nscaweb) module, as
+we will submit multi-line notifications, which
+will are fed to  the message to the nagios.cmd pipe.
 
-Implies that the nagios nsca client package is installed on the
-machine on which this program is run. 
-E.g. for debian systems the nsca package is: nsca
+The messages are received there as passive tests.
+
 """
 __author__ = "Placi Flury grid@switch.ch"
 __date__ = "16.02.2012"
 __version__ = "0.2.0"
 
-import os
+import time
 import logging
 import Queue
 from subprocess import Popen, PIPE
@@ -98,35 +100,24 @@ class NagiosNotification(object):
 class NagiosNotifier(object):
     """ Nagios notification class. Collects 
         various status messages and notifies Nagios
-        server via the nsca client protocol.
+        server via the curl protocol.
     """
 
-    def __init__(self, nagios_server, 
-                    send_nsca_cfg = '/etc/send_nsca.cfg', 
-                    nsca_bin = '/usr/sbin/send_nsca'):
+    def __init__(self, config):
         """
-            nagios_server: FQDN of nagios server e.g. monitor.smscg.ch
-            send_nsca_cfg: path to send_nsca client configuration file
-            nsca_bin: path to send_nsca binary
-
-            raises NagiosNotifierError if paths do not not exist
+            config - global config object 
         """
         self.log = logging.getLogger(__name__)
 
-        if not os.path.isfile(send_nsca_cfg):
-            self.log.error("Could not find send_nsca configuraiton: '%s'" % \
-                 send_nsca_cfg)
-            raise NagiosNotifierError('nsca config missing',
-                "Could not find send_nsca configuraiton: '%s'" % send_nsca_cfg)
-        
-        if not os.path.isfile(nsca_bin):
-            self.log.error("Could not find nsca binary: '%s'" % nsca_bin)
-            raise NagiosNotifierError('nsca binary  missing',
-                "Could not find nsca binary: '%s'" % nsca_bin)
+        self.curl_bin = config.curl_bin
 
-        self.nagios_server = nagios_server  
-        self.nsca_bin = nsca_bin
-        self.nsca_cfg = send_nsca_cfg
+        self.nscaweb_endpoint = config.nscaweb_host + ':' + \
+                str(config.nscaweb_port) +'/queue/' + \
+                 config.nscaweb_queue
+        self.nscaweb_port = config.nscaweb_port
+        self.nscaweb_user = config.nscaweb_user
+        self.nscaweb_pwd = config.nscaweb_pwd
+
         self.queue = Queue.LifoQueue(0) # notifications queue
 
     
@@ -138,44 +129,71 @@ class NagiosNotifier(object):
         """
         self.queue.put(notification)
 
-    def notify(self):
+    def notify(self, trace=True):
         """ 
-        Push notifications to Nagios server. Notice, we only
-        sent most recent notification/message for a given
-        host-service pair.
+        Push notifications to nscaweb host (usually running nagios server). 
+
+        params:
+        trace - if set true (default), the notifications for the same 
+                host/service pairs will be sent as chronological
+                traces (like stack traces).
+                if set false, only the most recent  notification for
+                a host/service pair will be sent (older notifications
+                are masked out). 
         """
+        # curl_msg: [TIMESTAMP] COMMAND_NAME;argument1;argument2;...;argumentN
+        if not trace:
+            pass
+        else: 
+            hs_msg_stack = {}
+            hs_perf_data = {}
+            hs_fin_status = {}
 
-        _sent = []  # keep track of already notified
+            while not self.queue.empty():
+                _note = self.queue.get()
+                _status = _note.get_status()
+                
+                
+                key = (_note.get_host(), _note.get_service())   
+            
+                if not hs_msg_stack.has_key(key):
+                    hs_msg_stack[key] = []
+                    hs_fin_status[key] = _status
+                    if _note.has_perf_data():
+                        hs_perf_data[key] = _note.get_perf_data()
 
-        while not self.queue.empty():
-            note = self.queue.get()
-            host = note.get_host()
-            service = note.get_service()
+                _msg = _note.get_status(nsca_coded=False) + ': ' +  _note.get_message()
+                hs_msg_stack[key].append(_msg)
+                
+                # fin status changes from OK to WARN for any non-OK sub-test that 
+                # had any problem
+                if hs_fin_status[key] == 0 and _status != 0:
+                    hs_fin_status[key] = 1
 
-            if (host,service) in _sent:
-                self.log.debug("Skipping old notification for '%s,%s'" % (host, service))
-                continue
-            _sent.append((host,service))
+            for k in hs_msg_stack.keys():
 
-            nsca_msg = ('%s;%s;%s;%s' % \
-                    (host, service, 
-                    note.get_status(),
-                    note.get_message()))
+                timestamp = int(time.time())
 
-            if note.has_perf_data():
-                nsca_msg += ("|%s" % note.get_perf_data())
-    
-            nsca_msg += '\n'
+                curl_msg = ('[%d] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%s;%s' % \
+                        (timestamp, k[0], k[1], 
+                        hs_fin_status[k],
+                        hs_msg_stack[k]))
 
-            echo = Popen(['echo', '-e', nsca_msg], stdout=PIPE) # beware whitespaces in args not stripped by Popen 
-           
-            nsca = Popen([self.nsca_bin,  
-                        '-H', self.nagios_server, 
-                        '-c',  self.nsca_cfg,
-                        '-d', ';'], stdin=echo.stdout, stdout=PIPE)
+                if hs_perf_data.has_key(k):
+                    curl_msg += ("|%s" % hs_perf_data[k])
 
-            self.log.debug('Sent notification >%s<.' % nsca_msg)
+                self.log.debug("username=%s'" % self.nscaweb_user) 
+ 
+                Popen([self.curl_bin,  
+                            '-d',  'username=%s' %  self.nscaweb_user, 
+                            '-d',  'password=%s' % self.nscaweb_pwd, 
+                            '--data-urlencode', 
+                             "input=%s" % curl_msg ,
+                            self.nscaweb_endpoint], stdout=PIPE)
 
+                self.log.debug('Sent notification >%s<.' % curl_msg)
+                
+            
 
 if __name__ == '__main__':
 

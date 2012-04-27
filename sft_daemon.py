@@ -32,10 +32,7 @@ class SFTDaemon(Daemon):
         Daemon.__init__(self, pidfile)
         self.__get_options()
         # import only after having initialized config
-        init_nagios_notifier(g.config.nagios_server, 
-                g.config.nsca_cfg, 
-                g.config.nsca_bin)
-
+        init_nagios_notifier(g.config)
         init_proxy_util(g.config)
 
         # db connections

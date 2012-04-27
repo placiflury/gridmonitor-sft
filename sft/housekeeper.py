@@ -30,6 +30,7 @@ class Housekeeper(object):
         self.down_clusters = []
         self.sft_refresh_cnt = g.config.refresh_period # refreshing SFT period 
                             # using (same counter for cleaning up old jobs)
+        self.log.info("Refresh counter for SFTs set to '%d' minutes " % self.sft_refresh_cnt)
         self.__refresh_down_clusters()
         self.__refresh_SFTs()
     
