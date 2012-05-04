@@ -29,3 +29,13 @@ Option 2.) is to have gmlog poinitng to '.arc'  or 'log' e.g.
 
 Please stick to the conventions as it's the only way for the SFT script
 to intercept logical errors.
+
+
+TODOs:
+-----
+-  provide means to create the directory where the SFT resuls are stored (in case it
+does not exist) default is /opt/smscg/monitor/sft/jobs. 
+Currently the daemon will just not start when it checks the config and
+realized that the directory does not exists.)
+
+- use arc python libs instead of subprocess to query job status and fetch finished jobs

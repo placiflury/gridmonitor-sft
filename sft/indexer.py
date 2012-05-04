@@ -6,7 +6,8 @@ directories of a directory. The files get attached a
 """
 from __future__ import with_statement 
 import os.path
-import os, logging
+import os
+import logging
 
 __author__ = "Placi Flury placi.flury@switch.ch"
 __date__ = "20.04.2010"
@@ -64,6 +65,7 @@ class HTMLIndexer(object):
               start with the  url_root path prefix. 
               If a relative path is given, the path will be completed 
               with the url_root prefix. 
+        warning: will change permissions to readeable for all
         """
         path = path.strip()
 
@@ -87,6 +89,7 @@ class HTMLIndexer(object):
             os.mkdir(path)
 
         self.path = path
+        os.chmod(path, 0755)
         self.log.debug("URL root is '%s', and directory to be indexed is '%s'" %  \
             (self.url_root, self.path))
 
@@ -101,11 +104,13 @@ class HTMLIndexer(object):
         index_list = list() 
 
         for path, subdir, files in os.walk(self.path):
+            os.chmod(path, 0755)
             for oldfile in files:
                 oldf = os.path.join(path, oldfile)
                 file_size = os.stat(oldf).st_size
                 newfile = oldfile + '.html'
                 os.rename(oldf, os.path.join(path, newfile))  
+                os.chmod(os.path.join(path,newfile), 0644)
                 from_root_path = path[len(self.url_root):]
                 index_list.append((from_root_path, newfile, file_size))    
         return index_list

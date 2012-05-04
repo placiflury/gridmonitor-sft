@@ -87,9 +87,7 @@ class Housekeeper(object):
         """ 
         removes old SFT jobs.   
         """ 
-        self.log.info("XXX")
         session = meta.Session
-        self.log.info("Xgot session")
         fetched_before = datetime.utcfromtimestamp(time.time() - (g.config.max_jobs_age * 60))
 
         fjobs = session.query(schema.SFTJob).filter(schema.SFTJob.db_lastmodified<=fetched_before).all()

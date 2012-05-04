@@ -3,6 +3,7 @@
 
 from  sft.errors.cron import CronError, CronRangeError, CronSyntaxError
 
+from sqlalchemy import and_, desc
 import sft.db.sft_meta as meta
 import sft.db.sft_schema as schema
 
@@ -40,7 +41,7 @@ def get_all_sft_jobs(sft_name, cluster_name = None):
             filter(and_(schema.SFTJob.sft_test_name == sft_name,
             schema.SFTJob.cluster_name == cluster_name)).order_by(desc(schema.SFTJob.submissiontime))
     else:
-         return meta.Session.query(schema.SFTJob).\
+        return meta.Session.query(schema.SFTJob).\
             filter_by(sft_test_name = sft_name).order_by(desc(schema.SFTJob.submissiontime))
 
 def get_job(name):
@@ -90,7 +91,7 @@ def get_test_suit_details(suit_name):
                 filter_by(name=suit_name).first()
     
  
-def parse_cron_entry(cron_str, max):
+def parse_cron_entry(cron_str, _max):
     """
     Parser for *simple* crontab style entries. 
     input: cron_str - crontab like entry as string
@@ -100,7 +101,7 @@ def parse_cron_entry(cron_str, max):
              - ranges  '1-3'
              - steps   '*/4' or '1-4/2'
              - mix list and range '1,2,3,8-12'
-            max  - maximal allowed value (type integer), must be > 0. Values 
+            _max  - maximal allowed value (type integer), must be > 0. Values 
                    greater then max, will be 'reset' to max.
     returns: list of integers (time entries)
 
@@ -108,21 +109,17 @@ def parse_cron_entry(cron_str, max):
             CronSyntaxError - for syntax errors
             CronError - else
     """
-    if type(max) != int:
+    if type(_max) != int:
         raise CronError("Invalid Max range", 
             "Variable 'max' must be of integer type")     
-    if max <= 0:
+    if _max <= 0:
         raise CronRangeError("Invalid Max value", 
             "Variable 'max' must be > 0")     
  
     if cron_str.isdigit():
         v = int(cron_str)
-        if v > max:
-            return max
-            """
-            raise CronRangeError("Exceeding max range", 
-                    "'%s' is exceeding max time value '%d'." % (cront_str, max))
-            """
+        if v > _max:
+            return _max
         return v
 
     if '/' in cron_str: # step
@@ -134,14 +131,14 @@ def parse_cron_entry(cron_str, max):
                 "'%s' in '%s' must be an integer." % (cron_str.spli('/')[1], cron_str))
         
         if pre == '*':
-            return range(0, max+1, step)
+            return range(0, _max + 1, step)
 
         if '-' in pre:
             try:
                 start = int(pre.split('-')[0])        
                 end = int(pre.split('-')[1])
-                if end > max:
-                    end = max
+                if end > _max:
+                    end = _max
             except:
                 raise CronSyntaxError("Syntax Error","'%s' in '%s' must contain an integer." % (pre, cron_str))
             return range(start, end+1, step)
@@ -149,7 +146,7 @@ def parse_cron_entry(cron_str, max):
     if ('-' in cron_str) and (',' in cron_str):
         res = list()
         for i in cron_str.split(','):
-            v = parse_cron_entry(i, max) 
+            v = parse_cron_entry(i, _max) 
             if type(v) is int:
                 res.append(v)
             else:
@@ -163,7 +160,7 @@ def parse_cron_entry(cron_str, max):
             if i.isdigit():
                 v = int(i)
                 if v > max:
-                    res.append(max)
+                    res.append(_max)
                 else: 
                     res.append(v)
             else:
@@ -173,12 +170,12 @@ def parse_cron_entry(cron_str, max):
     if '-' in cron_str:
         start = int(cron_str.split('-')[0])        
         end = int(cron_str.split('-')[1])
-        if end > max:
-            end = max
+        if end > _max:
+            end = _max
         return range(start, end+1, 1)
 
     if '*' == cron_str:
-        return range(0, max+1, 1)
+        return range(0, _max+1, 1)
 
     raise CronSyntaxError("Unknown/Invalid syntax", 
             "The cron entry '%s' seems not be a valid crontab style entry!" % (cron_str))
