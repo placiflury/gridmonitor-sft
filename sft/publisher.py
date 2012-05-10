@@ -91,7 +91,7 @@ class Publisher(object):
         passwd = user.get_passwd()
         file_prefix = hashlib.md5(DN).hexdigest() 
         myproxy_file = os.path.join(g.config.proxy_dir, file_prefix)
-        vomsproxy_file = os.path.join(g.config.proxy_dir, 
+        voms_proxy_file = os.path.join(g.config.proxy_dir, 
                 file_prefix +'_'+vo_name) 
 
         if (DN, vo_name) not in self.pos_dn_vos:
@@ -109,7 +109,7 @@ class Publisher(object):
             
             self.pos_dn_vos.append((DN, vo_name))
 
-        os.putenv('X509_USER_PROXY', vomsproxy_file)
+        os.environ['X509_USER_PROXY'] = voms_proxy_file
         return True
 
 

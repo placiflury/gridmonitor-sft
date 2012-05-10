@@ -2,4 +2,5 @@ TODOs:
 
 - allow 'restart/refresh' of daemon when sfts have been changed via GridMonitor web-interface -> DONE
 - don't test sites with scheduled downtimes -> DONE
+- remove old SFT tests (not just jobs), if they're not anymore defined in db.
 

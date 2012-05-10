@@ -56,7 +56,7 @@ class ProxyUtil(object):
             enddate_tuple = time.strptime(enddate,'%b %d %H:%M:%S %Y GMT')
             enddate_epoch = calendar.timegm(enddate_tuple)
             remaining_hours = (enddate_epoch - int(time.time()))/3600
-            self.log.debug("VOMS proxy remainig hours: %d " % remaining_hours)
+            self.log.info("VOMS proxy remainig hours: %d " % remaining_hours)
             self.log.debug("VOMS proxy minimal  hours: %d " % self.min_vomsproxy_hours)
        
             if remaining_hours > self.min_vomsproxy_hours:
@@ -117,7 +117,7 @@ class ProxyUtil(object):
             enddate_epoch = calendar.timegm(enddate_tuple)
             remaining_hours = (enddate_epoch - int(time.time()))/3600
             
-            self.log.debug("Myproxy remainig hours: %d " % remaining_hours)
+            self.log.info("Myproxy remainig hours: %d " % remaining_hours)
             self.log.debug("Myproxy minimal  hours: %d " % self.min_myproxy_hours)
             
             if remaining_hours > self.min_myproxy_hours:

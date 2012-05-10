@@ -12,6 +12,7 @@ import logging
 import os.path
 import hashlib 
 import subprocess
+import shlex
 import random
 
 
@@ -177,7 +178,7 @@ class SFT_Event(object):
 
                 myproxy_file = os.path.join(g.config.proxy_dir,
                              file_prefix)
-                vomsproxy_file = os.path.join(g.config.proxy_dir,
+                voms_proxy_file = os.path.join(g.config.proxy_dir,
                             file_prefix + '_' + vo.name) 
 
                 try:
@@ -227,7 +228,7 @@ class SFT_Event(object):
                     g.notifier.add_notification(_notification)
                     if not _vo_dict.has_key(vo.name):
                         _vo_dict[vo.name] = []
-                    _vo_dict[vo.name].append((DN, vomsproxy_file))
+                    _vo_dict[vo.name].append((DN, voms_proxy_file))
 
         return _vo_dict
     
@@ -254,7 +255,7 @@ class SFT_Event(object):
             _commit_flg = False
             for vo_name in _vo_dict.keys():
                 DN, voms_proxy_file  = random.choice(_vo_dict[vo_name]) # random select one user
-                os.putenv('X509_USER_PROXY', voms_proxy_file)
+                os.environ['X509_USER_PROXY'] = voms_proxy_file
  
                 for cluster in self.clusters:
                     if cluster.hostname in self.clusters_down:
@@ -267,33 +268,15 @@ class SFT_Event(object):
                         sft_job.test_name = test.name
 
                         xrsl_str = test.xrsl.replace('\n',' ')
-                        
                         cmd = "%s -j %s -c %s -e '%s'" % \
                             (self.arcsub, self.joblist, cluster.hostname, xrsl_str)
-                        arcsub = subprocess.Popen( cmd,
-                            shell = True,
+                        arcsub = subprocess.Popen(cmd,
+                            shell = True, close_fds=True,
                             stdout = subprocess.PIPE,
                             stderr = subprocess.PIPE)
-                    
-                        """    
-                        arcsub = subprocess.Popen(
-                            [ self.arcsub,
-                            '-j', self.joblist,
-                            '-c', cluster.hostname,
-                            '-e', xrsl_str],
-                            shell = True,
-                            stdout = subprocess.PIPE,
-                            stderr = subprocess.PIPE)
-                        cmd = "%s -c %s -e '%s'" % \
-                            (self.arcsub, cluster.hostname, test.xrsl.replace('\n',' '))
-                        self.log.debug('cmd:>%s<' % cmd)
-                        ret = subprocess.Popen(cmd, shell=True, 
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                        ret.wait()
-                        ret.poll()
-                        """
 
-                        output, stderr = arcsub.communicate()
+			output, stderr = arcsub.communicate()
+
                         if arcsub.returncode == 0:
                             # additional check -> if cluster does not exists, we still get returncode =0
                             if 'Job submission failed due to' in output:    
