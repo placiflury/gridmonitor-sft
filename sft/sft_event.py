@@ -275,7 +275,7 @@ class SFT_Event(object):
                             stdout = subprocess.PIPE,
                             stderr = subprocess.PIPE)
 
-			output, stderr = arcsub.communicate()
+                        output, stderr = arcsub.communicate()
 
                         if arcsub.returncode == 0:
                             # additional check -> if cluster does not exists, we still get returncode =0
@@ -286,7 +286,7 @@ class SFT_Event(object):
                                 session.add(sft_job)
                                 session.flush()
                                 _commit_flg = True
-                            
+
                                 _notification = NagiosNotification(cluster.hostname, self.sft_name )
                                 _msg = output # XXX maybe add VO + DN + test to get more details
                                 _notification.set_message(_msg)
@@ -301,13 +301,28 @@ class SFT_Event(object):
                                 session.add(sft_job)
                                 session.flush()
                                 _commit_flg = True
-                            
+
                                 _notification = NagiosNotification(cluster.hostname, self.sft_name )
                                 _msg = '(%s) - successfully submitted' % (test.name)
                                 _notification.set_message(_msg)
                                 _notification.set_status('OK')
                                 g.notifier.add_notification(_notification)
                                 continue
+                        elif 'Job submitted with jobid:': # hack to intercept spurious 'Certificate/Proxy path is empty' error
+                            jobid = output.split('jobid:')[1].strip()
+                            sft_job.jobid = jobid
+                            self.log.debug("(%s)- job sumbitted: ID %s" % (test.name, jobid))
+                            sft_job.status = 'submitted'
+                            session.add(sft_job)
+                            session.flush()
+                            _commit_flg = True
+
+                            _notification = NagiosNotification(cluster.hostname, self.sft_name )
+                            _msg = '(%s) - successfully submitted' % (test.name)
+                            _notification.set_message(_msg)
+                            _notification.set_status('OK')
+                            g.notifier.add_notification(_notification)
+                            continue
                         else:
                             self.log.error("(%s) Job submission failed, with: %s" % (test.name, stderr))
                             sft_job.error_type = "arcsub"
@@ -316,7 +331,7 @@ class SFT_Event(object):
                             session.add(sft_job)
                             session.flush()
                             _commit_flg = True
-                            
+
                             _notification = NagiosNotification(cluster.hostname, self.sft_name )
                             _msg = '(%s) - %s' % (test.name, stderr)
                             _notification.set_message(_msg)
