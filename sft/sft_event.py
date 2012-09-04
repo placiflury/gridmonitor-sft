@@ -308,7 +308,7 @@ class SFT_Event(object):
                                 _notification.set_status('OK')
                                 g.notifier.add_notification(_notification)
                                 continue
-                        elif 'Job submitted with jobid:': # hack to intercept spurious 'Certificate/Proxy path is empty' error
+                        elif 'Job submitted with jobid:' in output: # hack to intercept spurious 'Certificate/Proxy path is empty' error
                             jobid = output.split('jobid:')[1].strip()
                             sft_job.jobid = jobid
                             self.log.debug("(%s)- job sumbitted: ID %s" % (test.name, jobid))
