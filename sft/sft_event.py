@@ -9,20 +9,18 @@ __date__ = "11.06.2010"
 __version__ = "0.3.0"
 
 import logging
-import os.path
 import hashlib 
-import subprocess
-import shlex
 import random
-
+import os
+from datetime import datetime
 
 import sft.db.sft_meta as meta
 import sft.db.sft_schema as schema
-import sft_globals as g # import config, pxhandle, notifier
+import sft.sft_globals as g # import config, pxhandle, notifier
 
-from errors.sft import *
-from nagios_notifier import NagiosNotification
-from utils import helpers
+from sft.errors.sft import SFTInvalidExecTime, SFTInvalidTestParams, SFTConfigError
+from sft.nagios_notifier import NagiosNotification
+from sft.utils import helpers
 
 class AllMatch(set): 
     """Universal set - match everything"""
@@ -33,6 +31,9 @@ class SFT_Event(object):
     """ Site Functional Test (SFT) Event. The class holds 
         the time when a specific SFT is scheduled to be run.
     """
+
+    SPURIOUS_ARC_ERROR = 'ERROR: Certificate/Proxy path is empty'  # filter
+    TIMEOUT = 20    # secs we wait for arc commands to complete
     
     def __init__(self, sft_name, minute=None, hour=None,
                        day=None, month=None, dow=None):
@@ -119,18 +120,22 @@ class SFT_Event(object):
         if not sft:
             self.log.warn("SFT test '%s' does not exist anymore." % \
                 self.sft_name)
-            raise SFTInvalidTestParams("SFT missing", 'SFT test does not exist anymore.')
+            raise SFTInvalidTestParams("SFT missing", 
+                'SFT test does not exist anymore.')
         else:
             vosg = helpers.get_vo_group_details(sft.vo_group)
             if not vosg:
-                self.log.warn("SFT test '%s' has no VOs specified." % self.sft_name)
-                raise SFTInvalidTestParams("VO missing", 'No VOs associated with SFT.')
+                self.log.warn("SFT test '%s' has no VOs specified." % 
+                    self.sft_name)
+                raise SFTInvalidTestParams("VO missing", 
+                    'No VOs associated with SFT.')
             else:
                 self.vos = vosg.vos
 
             clg = helpers.get_cluster_group_details(sft.cluster_group)
             if not clg:
-                self.log.warn("SFT test '%s' has no clusters specified." % self.sft_name)
+                self.log.warn("SFT test '%s' has no clusters specified." % \
+                    self.sft_name)
                 raise SFTInvalidTestParams('Cluster missing',
                     'No Cluster associated with SFT.')
             else:   
@@ -138,16 +143,21 @@ class SFT_Event(object):
 
             tsts = helpers.get_test_suit_details(sft.test_suit)
             if not tsts:
-                self.log.warn("SFT test '%s' has no tests specified." % self.sft_name)
+                self.log.warn("SFT test '%s' has no tests specified." % \
+                    self.sft_name)
                 raise SFTInvalidTestParams('Tests missing',
                     'No test jobs associated with SFT.')
             else:
                 self.tests = tsts.tests
         
     
-    def _is_exec_time(self, t):
+    def is_exec_time(self, t = None):
         """Return True if this event should be
-            triggered at the specified datetime"""
+            triggered at the specified datetime.
+            t - datetime object, using 'now' if not set"""
+
+        if not t:
+            t = datetime(*datetime.utcnow().timetuple()[:5])
 
         self.log.debug("Check whether time  matches")
         return ((t.minute     in self.mins) and
@@ -183,24 +193,6 @@ class SFT_Event(object):
 
                 try:
                     g.pxhandle.check_create_myproxy(DN, passwd, myproxy_file)
-                    """
-                    except ProxyLoadError, epx:
-                        # XXX find new identifier...
-                        _notification = NagiosNotification(g.config.localhost, self.sft_name )
-                        _msg = DN + ': ' + exp.__repr__()
-                        _notification.set_message(_msg)
-                        _notification.set_status('CRITICAL')
-                        g.notifier.add_notification(_notification)
-                        _no_err_flg = False
-
-                    except MyProxyError, emy:
-                        _notification = NagiosNotification(g.config.localhost, self.sft_name )
-                        _msg = DN + ': ' + exp.__repr__()
-                        _notification.set_message(_msg)
-                        _notification.set_status('CRITICAL')
-                        g.notifier.add_notification(_notification)
-                        _no_err_flg = False
-                    """
                 except Exception, exp:
                     _notification = NagiosNotification(g.config.localhost, self.sft_name )
                     _msg = DN + ': ' + exp.__repr__()
@@ -237,78 +229,74 @@ class SFT_Event(object):
         return self.sft_name
 
     def set_clusters_down(self, clusters):
-        """ Set's the list of clusters that are currently
+        """ Sets the list of clusters that are currently
             on scheduled downtime. 
         """
         self.clusters_down = clusters
 
-    def check_exec(self, t):
-        """ checks whether it's time to execute sft event. """
-        
-        if self._is_exec_time(t):
-            self.log.debug("Time matched, SFT will be carried out.") 
-            #session = meta.Session()
-            session = meta.Session
-            _vo_dict = self._verify_all_sft_users()
-            self.log.debug("got _vo_dict '%r'" % _vo_dict)
 
-            _commit_flg = False
-            for vo_name in _vo_dict.keys():
-                DN, voms_proxy_file  = random.choice(_vo_dict[vo_name]) # random select one user
-                os.environ['X509_USER_PROXY'] = voms_proxy_file
- 
-                for cluster in self.clusters:
-                    if cluster.hostname in self.clusters_down:
-                        continue
-                    for test in self.tests:
-                        sft_job = schema.SFTJob(self.sft_name)
-                        sft_job.cluster_name = cluster.hostname
-                        sft_job.DN = DN
-                        sft_job.vo_name = vo_name
-                        sft_job.test_name = test.name
+    def run(self):
+        """ run SFT test """
+        self.log.debug("Running SFT.") 
+        session = meta.Session
+        _vo_dict = self._verify_all_sft_users()
+        self.log.debug("got _vo_dict '%r'" % _vo_dict)
 
-                        xrsl_str = test.xrsl.replace('\n',' ')
-                        cmd = "%s -j %s -c %s -e '%s'" % \
-                            (self.arcsub, self.joblist, cluster.hostname, xrsl_str)
-                        arcsub = subprocess.Popen(cmd,
-                            shell = True, close_fds=True,
-                            stdout = subprocess.PIPE,
-                            stderr = subprocess.PIPE)
+        _commit_flg = False
+        for vo_name in _vo_dict.keys():
+            DN, voms_proxy_file  = random.choice(_vo_dict[vo_name]) # random select one user
+            os.environ['X509_USER_PROXY'] = voms_proxy_file
 
-                        output, stderr = arcsub.communicate()
+            for cluster in self.clusters:
+                if cluster.hostname in self.clusters_down:
+                    continue
+                for test in self.tests:
+                    sft_job = schema.SFTJob(self.sft_name)
+                    sft_job.cluster_name = cluster.hostname
+                    sft_job.DN = DN
+                    sft_job.vo_name = vo_name
+                    sft_job.test_name = test.name
 
-                        if arcsub.returncode == 0:
-                            # additional check -> if cluster does not exists, we still get returncode =0
-                            if 'Job submission failed due to' in output:    
-                                self.log.error("(%s) - job submission failed (retcode is 0)" % test.name)
-                                sft_job.status = 'failed'
-                                sft_job.error_msg = output
-                                session.add(sft_job)
-                                session.flush()
-                                _commit_flg = True
+                    xrsl_str = test.xrsl.replace('\n',' ')
+                    cmd = "%s -j %s -c %s -e '%s'" % \
+                        (self.arcsub, self.joblist, cluster.hostname, xrsl_str)
+                    try:
+                        output, stderr, return_code  = helpers.timeout_call(cmd, SFT_Event.TIMEOUT)
+                    except helpers.Alarm:
+                        self.log.error('Arcsub timed out after (%d secs) for %s.' % (SFT_Event.TIMEOUT, cluster.hostname))
+                        sft_job.status = 'failed'
+                        sft_job.error_msg = 'Arcsub timed out after (%d secs)' % SFT_Event.TIMEOUT
+                        sft_job.error_type = "arcsub"
+                        session.add(sft_job)
+                        session.flush()
+                        _commit_flg = True
 
-                                _notification = NagiosNotification(cluster.hostname, self.sft_name )
-                                _msg = output # XXX maybe add VO + DN + test to get more details
-                                _notification.set_message(_msg)
-                                _notification.set_status('CRITICAL')
-                                g.notifier.add_notification(_notification)
-                                break
-                            else: 
-                                jobid = output.split('jobid:')[1].strip()
-                                sft_job.jobid = jobid
-                                self.log.debug("(%s)- job sumbitted: ID %s" % (test.name, jobid))
-                                sft_job.status = 'submitted'
-                                session.add(sft_job)
-                                session.flush()
-                                _commit_flg = True
+                        _notification = NagiosNotification(cluster.hostname, self.sft_name )
+                        _msg =  'Arcsub timed out after (%d secs)' % SFT_Event.TIMEOUT
+                        _notification.set_message(_msg)
+                        _notification.set_status('CRITICAL')
+                        g.notifier.add_notification(_notification)
+                        break
+                    
+                    if return_code == 0:
+                        # additional check -> if cluster does not exists, we still get returncode 0
+                        if 'Job submission failed due to' in output:    
+                            self.log.error("(%s, %s) - job submission failed (retcode is 0)" % \
+                                (test.name, sft_job.cluster_name))
+                            sft_job.status = 'failed'
+                            sft_job.error_msg = output
+                            sft_job.error_type = "arcsub"
+                            session.add(sft_job)
+                            session.flush()
+                            _commit_flg = True
 
-                                _notification = NagiosNotification(cluster.hostname, self.sft_name )
-                                _msg = '(%s) - successfully submitted' % (test.name)
-                                _notification.set_message(_msg)
-                                _notification.set_status('OK')
-                                g.notifier.add_notification(_notification)
-                                continue
-                        elif 'Job submitted with jobid:' in output: # hack to intercept spurious 'Certificate/Proxy path is empty' error
+                            _notification = NagiosNotification(cluster.hostname, self.sft_name )
+                            _msg = output # XXX maybe add VO + DN + test to get more details
+                            _notification.set_message(_msg)
+                            _notification.set_status('CRITICAL')
+                            g.notifier.add_notification(_notification)
+                            continue
+                        else: 
                             jobid = output.split('jobid:')[1].strip()
                             sft_job.jobid = jobid
                             self.log.debug("(%s)- job sumbitted: ID %s" % (test.name, jobid))
@@ -323,20 +311,39 @@ class SFT_Event(object):
                             _notification.set_status('OK')
                             g.notifier.add_notification(_notification)
                             continue
-                        else:
-                            self.log.error("(%s) Job submission failed, with: %s" % (test.name, stderr))
-                            sft_job.error_type = "arcsub"
-                            sft_job.error_msg =  stderr
-                            sft_job.status = 'failed'
-                            session.add(sft_job)
-                            session.flush()
-                            _commit_flg = True
+                    # hack to intercept spurious 'Certificate/Proxy path is empty' error
+                    elif 'Job submitted with jobid:' in output:
+                        jobid = output.split('jobid:')[1].strip()
+                        sft_job.jobid = jobid
+                        self.log.debug("(%s)- job sumbitted: ID %s" % (test.name, jobid))
+                        sft_job.status = 'submitted'
+                        session.add(sft_job)
+                        session.flush()
+                        _commit_flg = True
 
-                            _notification = NagiosNotification(cluster.hostname, self.sft_name )
-                            _msg = '(%s) - %s' % (test.name, stderr)
-                            _notification.set_message(_msg)
-                            _notification.set_status('CRITICAL')
-                            g.notifier.add_notification(_notification)
-                            
-            if _commit_flg:
-                session.commit()
+                        _notification = NagiosNotification(cluster.hostname, self.sft_name )
+                        _msg = '(%s) - successfully submitted' % (test.name)
+                        _notification.set_message(_msg)
+                        _notification.set_status('OK')
+                        g.notifier.add_notification(_notification)
+                        continue
+                    else:
+                        self.log.error("(%s) Job submission failed, with: %s" % (test.name, stderr))
+                        sft_job.error_type = "arcsub"
+                        if output and SFT_Event.SPURIOUS_ARC_ERROR in stderr:
+                            sft_job.error_msg =  output
+                        else:
+                            sft_job.error_msg =  stderr 
+                        sft_job.status = 'failed'
+                        session.add(sft_job)
+                        session.flush()
+                        _commit_flg = True
+
+                        _notification = NagiosNotification(cluster.hostname, self.sft_name )
+                        _msg = '(%s) - %s' % (test.name, stderr)
+                        _notification.set_message(_msg)
+                        _notification.set_status('CRITICAL')
+                        g.notifier.add_notification(_notification)
+                        
+        if _commit_flg:
+            session.commit()

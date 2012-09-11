@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 """ Helper functions and decorators """
 
+import signal
+import os
+import subprocess
+import time
+from datetime import datetime 
+
 from  sft.errors.cron import CronError, CronRangeError, CronSyntaxError
 
 from sqlalchemy import and_, desc
@@ -210,7 +216,66 @@ def strip_args(func):
     return new_func
 
 
-if __name__ == '__main__':
+class Alarm(Exception):
+    pass
+
+def timeout_call_old(cmd, timeout):
+    """ Invokes command specified by @cmd. 
+        Raises 'Alarm' Exception if cmd does
+        not return withint @timeout (in secs)
+        
+        Can only be used in main thread ;-(
+    """
+    call = None
+
+    def timeout_handler(signum, frame):
+        if call:
+            os.kill(call.pid, signal.SIGKILL)
+            os.waitpid(-1, os.WNOHANG)
+        raise Alarm
+
+    signal.signal(signal.SIGALRM, timeout_handler)
+
+    call = subprocess.Popen(cmd,
+            shell = True, close_fds = True,
+            stdout = subprocess.PIPE,
+            stderr = subprocess.PIPE)
+
+    signal.alarm(timeout)
+    res = call.communicate()
+    return_code = call.returncode
+    signal.alarm(0) # switch off alarm
+    return res, return_code
+
+
+def timeout_call(cmd, timeout):
+    """
+    taken from http://amix.dk/blog/post/19408
+    call shell-command and either return its output or kill it
+    if it doesn't normally exit within timeout seconds and return None"""
+
+    start = datetime.now()
+    call = subprocess.Popen(cmd,
+            shell = True, close_fds = True,
+            stdout = subprocess.PIPE,
+            stderr = subprocess.PIPE)
+
+    while call.poll() is None:
+        time.sleep(1)
+        now = datetime.now()
+        if (now - start).seconds > timeout:
+            os.kill(call.pid, signal.SIGKILL)
+            os.waitpid(-1, os.WNOHANG)
+            raise Alarm
+
+    out, err  = call.communicate()
+    return_code = call.returncode
+    
+    return out, err, return_code
+
+
+
+if  __name__ == '__main__':
     
     # some quick helpers testing
 
