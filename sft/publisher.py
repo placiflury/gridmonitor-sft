@@ -9,6 +9,7 @@ import subprocess
 from sqlalchemy import and_ as AND
 from sqlalchemy import or_ as OR
 from datetime import datetime
+from sft.utils import helpers
 
 import db.sft_meta as meta
 import db.sft_schema as schema
@@ -34,6 +35,7 @@ class Publisher(object):
 
     FIN_STATES = ['failed', 'fetched', 'fetched_failed', 
                 'timeout'] + GRID_FIN_STATES
+    TIMEOUT = 20
 
     def __init__(self):
         self.log = logging.getLogger(__name__)
@@ -138,16 +140,15 @@ class Publisher(object):
 
             self.log.debug("Querying status of job: %s" % entry.jobid.strip())
 
-            arcstat = subprocess.Popen(
-                [ self.arcstat,
-                '-j', self.joblist,
-                entry.jobid.strip()],
-                stdout = subprocess.PIPE,
-                stderr = subprocess.PIPE)
+            cmd = '%s -j %s %s' % (self.arcstat, self.joblist,entry.jobid.strip())
+            
+            try:
+                outdata, err, return_code  = helpers.timeout_call(cmd, Publisher.TIMEOUT)
+            except helpers.Alarm:
+                continue
 
-            stdoutdata, stderrdata = arcstat.communicate()
-            if arcstat.returncode == 0:
-                output = stdoutdata.split('\n')  # Job, Job Name, Status, [Exit code]
+            if return_code == 0:
+                output = outdata.split('\n')  # Job, Job Name, Status, [Exit code]
                 if len(output) > 2:
                     # some dirty hacking, as Status sometimes not present, no clue why.
                     if not output[2]:
@@ -161,11 +162,11 @@ class Publisher(object):
                 entry.db_lastmodified = datetime.utcnow()
                 self.session.flush()
             else:
-                _error_msg = stdoutdata + 'Error: ' + stderrdata
+                _error_msg = outdata + 'Error: ' + err
                 self.log.debug("Quering job status failed with %s" % _error_msg)
                
                 # hack to intercept jobs that got 'lost'
-                if 'No jobs given' in stderrdata:
+                if 'No jobs given' in err:
                     entry.status = 'fetch_failed'
                     entry.error_type = 'sft'
                     entry.error_msg = "Job '%s' not found anymore" % entry.jobid.strip()
@@ -239,27 +240,17 @@ class Publisher(object):
             can be fetched. 
         """    
         cmd = '%s -j %s -D %s %s' % (self.arcget, self.joblist, self.jobsdir, jobid.strip() )
-        
-        # this did not work... why?
-        """
-        arcget  = subprocess.Popen(
-            [self.arcget,
-            '-j', self.joblist,
-            '-D', self.jobsdir,
-            jobid.strip()],  shell ...
-        """
-        arcget = subprocess.Popen(cmd,
-            shell = True, 
-            stdout = subprocess.PIPE, 
-            stderr = subprocess.PIPE)
     
         # as ret.wait() sets return codes != 0 even for success, we therefore
         # need to parse the output ;-(
         
-        output, stderr = arcget.communicate()
+        try:
+            output, stderr, return_code  = helpers.timeout_call(cmd, Publisher.TIMEOUT)
+        except helpers.Alarm:
+            pass 
         self.log.debug("arcget output:>%s<, stderr:>%s<" % (output.strip('\n'), stderr))
     
-        self.log.debug("return-code: %d" % arcget.returncode)
+        self.log.debug("return-code: %d" % return_code)
  
         if output and ('successfully' in output):
             self.log.info("Stored job results at %s" % output.strip('\n'))

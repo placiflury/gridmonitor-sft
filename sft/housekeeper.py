@@ -13,16 +13,16 @@ from datetime import datetime
 from gridmonitor.model.nagios import meta as nagios_meta
 from gridmonitor.model.nagios import scheduleddowntimes
 
-import db.sft_meta as meta
-import db.sft_schema as schema
+import sft.db.sft_meta as meta
+import sft.db.sft_schema as schema
 
-from utils import helpers
-from nagios_notifier import NagiosNotification
-
-import sft_globals as g
-from sft_event import SFT_Event
+from sft.utils import helpers
+from sft.nagios_notifier import NagiosNotification
+import sft.sft_globals as g
+from sft.sft_event import SFT_Event
 
 class Housekeeper(object):
+    
     
     def __init__(self):
         self.log = logging.getLogger(__name__)

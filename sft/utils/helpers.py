@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 """ Helper functions and decorators """
 
+import signal
+import os
+import subprocess
+import time
+from datetime import datetime 
+
 from  sft.errors.cron import CronError, CronRangeError, CronSyntaxError
 
 from sqlalchemy import and_, desc
@@ -17,7 +23,7 @@ def get_sft_test_details(sft_name):
 
 def get_sft_tests_details():
     """ returns a list with all SFT test desription
-        objects if no name was passed (or empty list)
+        objects (or empty list)
     """
     return meta.Session.query(schema.SFTTest)
 
@@ -33,7 +39,7 @@ def get_all_jobs():
     return meta.Session.query(schema.SFTJob)
 
 def get_all_sft_jobs(sft_name, cluster_name = None):
-    """ returns all jobs with of SFT with name  sft_name. If cluster_name is 
+    """ returns all jobs of SFT with name  sft_name. If cluster_name is 
         passed only return jobs for given clusters """
 
     if cluster_name:
@@ -43,6 +49,28 @@ def get_all_sft_jobs(sft_name, cluster_name = None):
     else:
         return meta.Session.query(schema.SFTJob).\
             filter_by(sft_test_name = sft_name).order_by(desc(schema.SFTJob.submissiontime))
+
+def get_cluster_last_sfts(cluster_name):
+    """ returns a dictionary  of the latest SFT job results  (each SFT
+        once), or None if there weren't any SFT jobs for the specified cluster.
+    """
+
+    sfts = {}
+    _skipp = [] # keeps track of sft_test_name and test_name that are already in
+ 
+    for job in meta.Session.query(schema.SFTJob).\
+    filter_by(cluster_name = cluster_name).\
+    order_by(desc(schema.SFTJob.submissiontime)):
+        if (job.sft_test_name, job.test_name)  in _skipp:
+            pass 
+        else:
+            if not sfts.has_key(job.sft_test_name):
+                sfts[job.sft_test_name] = []
+
+            sfts[job.sft_test_name].append(job)
+            _skipp.append((job.sft_test_name, job.test_name))
+
+    return sfts
 
 def get_job(name):
     """ returns SFT job with given name in db. """
@@ -210,7 +238,66 @@ def strip_args(func):
     return new_func
 
 
-if __name__ == '__main__':
+class Alarm(Exception):
+    pass
+
+def timeout_call_old(cmd, timeout):
+    """ Invokes command specified by @cmd. 
+        Raises 'Alarm' Exception if cmd does
+        not return withint @timeout (in secs)
+        
+        Can only be used in main thread ;-(
+    """
+    call = None
+
+    def timeout_handler(signum, frame):
+        if call:
+            os.kill(call.pid, signal.SIGKILL)
+            os.waitpid(-1, os.WNOHANG)
+        raise Alarm
+
+    signal.signal(signal.SIGALRM, timeout_handler)
+
+    call = subprocess.Popen(cmd,
+            shell = True, close_fds = True,
+            stdout = subprocess.PIPE,
+            stderr = subprocess.PIPE)
+
+    signal.alarm(timeout)
+    res = call.communicate()
+    return_code = call.returncode
+    signal.alarm(0) # switch off alarm
+    return res, return_code
+
+
+def timeout_call(cmd, timeout):
+    """
+    taken from http://amix.dk/blog/post/19408
+    call shell-command and either return its output or kill it
+    if it doesn't normally exit within timeout seconds and return None"""
+
+    start = datetime.now()
+    call = subprocess.Popen(cmd,
+            shell = True, close_fds = True,
+            stdout = subprocess.PIPE,
+            stderr = subprocess.PIPE)
+
+    while call.poll() is None:
+        time.sleep(1)
+        now = datetime.now()
+        if (now - start).seconds > timeout:
+            os.kill(call.pid, signal.SIGKILL)
+            os.waitpid(-1, os.WNOHANG)
+            raise Alarm
+
+    out, err  = call.communicate()
+    return_code = call.returncode
+    
+    return out, err, return_code
+
+
+
+if  __name__ == '__main__':
     
     # some quick helpers testing
 

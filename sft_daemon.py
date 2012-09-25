@@ -10,7 +10,6 @@ __version__ = "0.3.0"
 import logging
 import logging.config
 import sys
-import time 
 from optparse import OptionParser
 from sqlalchemy import engine_from_config
 
@@ -24,8 +23,6 @@ from sft.scheduler import Scheduler
 
 class SFTDaemon(Daemon):
     """ Daemon for Site Functional Tests (SFTs) """
-    
-    SCHEDULER_PERIODICITY = 60 # in seconds
 
     def __init__(self, pidfile="/var/run/sft_daemon.pid"):
         self.log = logging.getLogger(__name__)
@@ -86,6 +83,7 @@ class SFTDaemon(Daemon):
             self.log.info("started...")
         elif self.command == 'stop':
             self.log.info("stopping daemon...")
+            self.scheduler.stop()
             daemon.stop()
             self.log.info("stopped")
         elif self.command == 'restart':
@@ -97,21 +95,7 @@ class SFTDaemon(Daemon):
 
     def run(self):
 
-        while True:
-            try:
-                timestamp = time.time()
-                self.scheduler.main()
-                proctime = time.time() - timestamp
-                self.log.debug("Scheduler current run took  %s seconds" % proctime)
-                if proctime > SFTDaemon.SCHEDULER_PERIODICITY:
-                    continue
-                else:
-                    time.sleep(SFTDaemon.SCHEDULER_PERIODICITY - proctime)
-
-            except Exception, e:
-                self.log.error("RUN-loop: Got exception %r", e)
-                time.sleep(SFTDaemon.SCHEDULER_PERIODICITY)
-
+        self.scheduler.start()
 
 
 if __name__ == "__main__":
